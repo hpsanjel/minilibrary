@@ -1,103 +1,152 @@
-import Image from "next/image";
+"use client";
+
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+	const { data: session } = useSession();
+	const user = session?.user;
+	const router = useRouter();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+	useEffect(() => {
+		if (user?.role === "ADMIN") {
+			router.replace("/admin/dashboard");
+		}
+	}, [user, router]);
+
+	return (
+		<main className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col">
+			{/* Hero Section */}
+			<section className="flex-1 flex flex-col items-center justify-center text-center px-6 py-16">
+				<h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6">
+					Welcome to <span className="text-blue-600">Mini Library</span>
+				</h1>
+				<p className="text-lg md:text-xl text-gray-600 max-w-2xl mb-8">Your all-in-one digital library management system. Borrow books, track transactions, and manage your library with ease.</p>
+
+				<div className="flex gap-4">
+					{user ? (
+						<>
+							<Link href="/books" className="px-6 py-3 rounded-xl bg-blue-600 text-white text-lg font-medium hover:bg-blue-700 transition focus:outline-none focus:ring-2 focus:ring-blue-400">
+								Browse Books
+							</Link>
+							{user.role === "ADMIN" && (
+								<Link href="/admin/dashboard" className="px-6 py-3 rounded-xl border border-gray-300 text-gray-900 text-lg font-medium hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-blue-400">
+									Go to Dashboard
+								</Link>
+							)}
+						</>
+					) : (
+						<>
+							<Link href="/auth/signin" className="px-6 py-3 rounded-xl bg-blue-600 text-white text-lg font-medium hover:bg-blue-700 transition focus:outline-none focus:ring-2 focus:ring-blue-400">
+								Get Started
+							</Link>
+							<Link href="/books" className="px-6 py-3 rounded-xl border border-gray-300 text-gray-900 text-lg font-medium hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-blue-400">
+								Browse Books
+							</Link>
+						</>
+					)}
+				</div>
+			</section>
+
+			{/* Features Section */}
+			<section className="py-20 bg-white">
+				<div className="max-w-6xl mx-auto px-6 grid md:grid-cols-3 gap-10">
+					<div className="p-6 rounded-2xl shadow-md hover:shadow-lg transition bg-blue-50">
+						<h3 className="text-xl font-semibold mb-3 text-blue-700">📚 Easy Book Management</h3>
+						<p className="text-gray-600">Add, edit, and organize books in your library with just a few clicks.</p>
+					</div>
+					<div className="p-6 rounded-2xl shadow-md hover:shadow-lg transition bg-green-50">
+						<h3 className="text-xl font-semibold mb-3 text-green-700">👩‍🎓 Student-Friendly</h3>
+						<p className="text-gray-600">Browse available books, borrow instantly, and track your reading history.</p>
+					</div>
+					<div className="p-6 rounded-2xl shadow-md hover:shadow-lg transition bg-purple-50">
+						<h3 className="text-xl font-semibold mb-3 text-purple-700">📊 Admin Dashboard</h3>
+						<p className="text-gray-600">Get insights into books, users, and transactions with a modern dashboard.</p>
+					</div>
+				</div>
+			</section>
+
+			{/* Stats Section */}
+			<section className="py-16 bg-gray-50">
+				<div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 text-center gap-8">
+					<div>
+						<p className="text-3xl font-bold text-blue-600">500+</p>
+						<p className="text-gray-600">Books Available</p>
+					</div>
+					<div>
+						<p className="text-3xl font-bold text-green-600">200+</p>
+						<p className="text-gray-600">Active Students</p>
+					</div>
+					<div>
+						<p className="text-3xl font-bold text-purple-600">1K+</p>
+						<p className="text-gray-600">Transactions</p>
+					</div>
+					<div>
+						<p className="text-3xl font-bold text-pink-600">100%</p>
+						<p className="text-gray-600">Free & Open Source</p>
+					</div>
+				</div>
+			</section>
+
+			{/* Testimonials Section */}
+			<section className="py-20 bg-white">
+				<h2 className="text-3xl font-bold text-center mb-10 text-gray-900">What Our Users Say</h2>
+				<div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-8 px-6">
+					<div className="p-6 bg-gray-50 rounded-xl shadow-md">
+						<p className="text-gray-600 mb-4">&quot;This library system made borrowing so easy! No paperwork, just click and borrow.&quot;</p>
+						<p className="font-semibold">– Sarah, Student</p>
+					</div>
+					<div className="p-6 bg-gray-50 rounded-xl shadow-md">
+						<p className="text-gray-600 mb-4">&quot;Managing books and users is now effortless. The dashboard is a lifesaver!&quot;</p>
+						<p className="font-semibold">– Mr. John, Librarian</p>
+					</div>
+					<div className="p-6 bg-gray-50 rounded-xl shadow-md">
+						<p className="text-gray-600 mb-4">&quot;The UI is so clean and easy to use. I wish all school systems were like this.&quot;</p>
+						<p className="font-semibold">– Alex, Teacher</p>
+					</div>
+				</div>
+			</section>
+
+			{/* FAQ Section */}
+			<section className="py-20 bg-gray-50">
+				<h2 className="text-3xl font-bold text-center mb-10 text-gray-900">Frequently Asked Questions</h2>
+				<div className="max-w-4xl mx-auto space-y-6 px-6">
+					<div className="p-4 bg-white rounded-xl shadow">
+						<h3 className="font-semibold text-lg mb-2 text-gray-900">Is this library free to use?</h3>
+						<p className="text-gray-600">✅ Yes! It’s completely free and open-source.</p>
+					</div>
+					<div className="p-4 bg-white rounded-xl shadow">
+						<h3 className="font-semibold text-lg mb-2 text-gray-900">Can admins add books?</h3>
+						<p className="text-gray-600">✅ Yes, admins can add, edit, and remove books easily.</p>
+					</div>
+					<div className="p-4 bg-white rounded-xl shadow">
+						<h3 className="font-semibold text-lg mb-2 text-gray-900">Do students need to register?</h3>
+						<p className="text-gray-600">✅ Yes, students must sign up to borrow books.</p>
+					</div>
+				</div>
+			</section>
+
+			{/* CTA Section */}
+			<section className="py-16 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-center">
+				<h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">Ready to explore the library?</h2>
+				<p className="mb-6 text-lg text-blue-100">{user ? "Start reading today!" : "Join now and manage your library smarter."}</p>
+				{user ? (
+					<Link href="/books" className="px-8 py-3 bg-white text-blue-700 font-semibold rounded-xl shadow-md hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-blue-400">
+						Go to Books
+					</Link>
+				) : (
+					<Link href="/auth/signin" className="px-8 py-3 bg-white text-blue-700 font-semibold rounded-xl shadow-md hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-blue-400">
+						Sign In
+					</Link>
+				)}
+			</section>
+
+			{/* Footer */}
+			<footer className="py-6 text-center text-gray-500 border-t bg-white">
+				<p>© {new Date().getFullYear()} Mini Library. Built with Next.js & Prisma.</p>
+			</footer>
+		</main>
+	);
 }
