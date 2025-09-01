@@ -11,7 +11,12 @@ export const authOptions = {
 			async authorize(credentials) {
 				const user = await prisma.user.findUnique({ where: { email: credentials.email } });
 				if (user && (await bcrypt.compare(credentials.password, user.password))) {
-					return { id: user.id, email: user.email, name: user.name, role: user.role };
+					if (user.verifiedUser === "Yes") {
+						return { id: user.id, email: user.email, name: user.name, role: user.role };
+					} else {
+						// Not verified
+						throw new Error("Please verify your email before signing in.");
+					}
 				}
 				return null;
 			},

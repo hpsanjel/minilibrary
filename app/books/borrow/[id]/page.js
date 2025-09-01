@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { sendBookIssuedEmail } from "@/lib/sendBookIssuedEmail";
 
 export default async function BorrowBookPage(props) {
 	// Await params if it's a Promise (Next.js 15+)
@@ -48,27 +49,39 @@ export default async function BorrowBookPage(props) {
 		},
 	});
 	if (activeBorrows >= 2) {
-		return (
-			<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-				<div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md text-center">
-					<h2 className="text-xl font-bold mb-4 text-red-600">Borrow Limit Reached</h2>
-					<p className="mb-4">
-						You can only borrow a maximum of 2 books at a time.
-						<br />
-						Please return a book before borrowing another.
-					</p>
-					<a href="/books" className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
-						Go Back
-					</a>
+		// User already has 2 books, do not allow borrowing a third
+		// But allow borrowing if this is the current book (i.e., if the user is on the borrow page for a book they haven't borrowed yet)
+		// Check if the user already has a transaction for this book and it is not returned
+		const alreadyBorrowed = await prisma.transaction.findFirst({
+			where: {
+				userId,
+				bookId,
+				returned: false,
+			},
+		});
+		if (!alreadyBorrowed) {
+			return (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+					<div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md text-center">
+						<h2 className="text-xl font-bold mb-4 text-red-600">Borrow Limit Reached</h2>
+						<p className="mb-4">
+							You can only borrow a maximum of 2 books at a time.
+							<br />
+							Please return a book before borrowing another.
+						</p>
+						<a href="/books" className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
+							Go Back
+						</a>
+					</div>
 				</div>
-			</div>
-		);
+			);
+		}
 	}
 
 	// Set deadline to 30 days from now
 	const deadline = new Date();
 	deadline.setDate(deadline.getDate() + 30);
-	await prisma.transaction.create({ data: { userId, bookId, deadline } });
+	const transaction = await prisma.transaction.create({ data: { userId, bookId, deadline } });
 	// Decrement copies and update availability
 	const updatedBook = await prisma.book.update({
 		where: { id: bookId },
@@ -78,6 +91,20 @@ export default async function BorrowBookPage(props) {
 	});
 	if (updatedBook.copies <= 0 && updatedBook.available) {
 		await prisma.book.update({ where: { id: bookId }, data: { available: false } });
+	}
+
+	// Send confirmation email to user
+	try {
+		await sendBookIssuedEmail({
+			to: user.email,
+			userName: user.name || user.email,
+			bookTitle: book.title,
+			bookAuthor: book.author,
+			deadline: deadline.toLocaleString("en-GB", { year: "numeric", month: "short", day: "numeric" }),
+			transactionId: transaction.id,
+		});
+	} catch (emailErr) {
+		console.error("Failed to send issue confirmation email", emailErr);
 	}
 	// Show completion message instead of redirect
 	return (

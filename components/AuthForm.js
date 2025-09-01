@@ -1,8 +1,11 @@
 "use client";
-import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useState, useEffect } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function AuthForm() {
+	const { data: session, status } = useSession();
+	const router = useRouter();
 	const [isSignUp, setIsSignUp] = useState(false);
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -13,11 +16,25 @@ export default function AuthForm() {
 	const [address, setAddress] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
+	const [success, setSuccess] = useState("");
+
+	// Redirect if already authenticated (in useEffect to avoid setState in render)
+	useEffect(() => {
+		if (status === "authenticated") {
+			if (session?.user?.role === "ADMIN") {
+				router.replace("/admin/dashboard");
+			} else {
+				router.replace("/");
+			}
+		}
+	}, [status, session, router]);
+	if (status === "authenticated") return null;
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setLoading(true);
 		setError("");
+		setSuccess("");
 		if (isSignUp) {
 			// Call signup API
 			const res = await fetch("/api/auth/signup", {
@@ -26,23 +43,21 @@ export default function AuthForm() {
 				body: JSON.stringify({ name, email, password, phone, city, postalCode, address }),
 			});
 			const data = await res.json();
+			setLoading(false);
 			if (!res.ok) {
 				setError(data.error || "Signup failed");
-				setLoading(false);
 				return;
 			}
-			// Auto sign in after signup
-			const signInRes = await signIn("credentials", {
-				redirect: false,
-				email,
-				password,
-			});
-			setLoading(false);
-			if (signInRes?.error) {
-				setError("Sign in after signup failed");
-			} else {
-				window.location.href = "/";
-			}
+			setSuccess("Signup successful! Please check your email to verify your account before signing in.");
+			setIsSignUp(false);
+			setEmail("");
+			setPassword("");
+			setName("");
+			setPhone("");
+			setCity("");
+			setPostalCode("");
+			setAddress("");
+			return;
 		} else {
 			// Sign in
 			const res = await signIn("credentials", {
@@ -54,7 +69,8 @@ export default function AuthForm() {
 			if (res?.error) {
 				setError("Invalid email or password");
 			} else {
-				window.location.href = "/admin/dashboard";
+				// Use router to redirect after successful login
+				router.replace("/admin/dashboard");
 			}
 		}
 	};
@@ -63,6 +79,7 @@ export default function AuthForm() {
 		<form onSubmit={handleSubmit} className="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow space-y-6">
 			<h1 className="text-2xl font-bold text-center text-gray-900">{isSignUp ? "Sign Up" : "Sign In"}</h1>
 			{error && <p className="text-red-600 text-center">{error}</p>}
+			{success && <p className="text-green-600 text-center">{success}</p>}
 			{isSignUp && (
 				<>
 					<div>

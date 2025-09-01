@@ -7,6 +7,13 @@ export default function BookCard({ book }) {
 			{/* Accent bar */}
 			<div className={`absolute top-0 left-0 w-full h-1 ${book.available ? "bg-green-500" : "bg-red-500"}`} aria-hidden="true"></div>
 
+			{/* Copies badge */}
+			<div className="absolute top-3 right-3 z-10">
+				<span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold shadow-lg ${book.copies > 0 ? "bg-blue-100 text-blue-800" : "bg-gray-200 text-gray-500"}`} title="Copies available">
+					{book.copies} {book.copies === 1 ? "copy" : "copies"} available
+				</span>
+			</div>
+
 			{/* Cover Image */}
 			<div className="w-full h-48 bg-gray-100 flex items-center justify-center overflow-hidden">
 				{book.coverUrl ? (
@@ -34,7 +41,7 @@ export default function BookCard({ book }) {
 				<div className="mt-4">
 					{book.available ? (
 						<Link href={`/books/borrow/${book.id}`} className="block w-full text-center bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-xl shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition">
-							Reserve Now
+							Borrow Now
 						</Link>
 					) : (
 						<button disabled className="block w-full text-center bg-gray-200 text-gray-500 text-sm font-medium px-4 py-2 rounded-xl cursor-not-allowed" aria-disabled="true">

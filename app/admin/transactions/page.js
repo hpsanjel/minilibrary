@@ -111,7 +111,7 @@ export default function AdminTransactionsPage() {
 							<tr>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Book</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Borrowed At</th>
+								{/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Borrowed At</th> */}
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deadline</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Returned At</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fine (NOK)</th>
@@ -140,7 +140,7 @@ export default function AdminTransactionsPage() {
 										<tr key={tx.id} className="hover:bg-gray-50">
 											<td className="px-6 py-4 whitespace-nowrap text-sm">{tx.user?.name || tx.user?.email || "-"}</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm">{tx.book?.title || "-"}</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm">{`${new Date(tx.createdAt).toLocaleDateString()} ${new Date(tx.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}</td>
+											{/* <td className="px-6 py-4 whitespace-nowrap text-sm">{`${new Date(tx.createdAt).toLocaleDateString()} ${new Date(tx.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}</td> */}
 											<td className="px-6 py-4 whitespace-nowrap text-sm">{tx.deadline ? `${new Date(tx.deadline).toLocaleDateString()} ${new Date(tx.deadline).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "-"}</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm">{tx.returnedAt ? `${new Date(tx.returnedAt).toLocaleDateString()} ${new Date(tx.returnedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "-"}</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm">{typeof tx.fine === "number" && tx.fine > 0 ? tx.fine : 0}</td>

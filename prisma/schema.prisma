@@ -18,6 +18,8 @@ model User {
   address     String?
   role        Role         @default(STUDENT)
   verifiedUser String      @default("No")
+  verificationToken String?
+  verificationTokenExpires DateTime?
   transactions Transaction[]
 }
 

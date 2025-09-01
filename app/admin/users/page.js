@@ -86,9 +86,9 @@ export default function AdminUsersPage() {
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
+							{/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Postal Code</th>
-							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th> */}
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Verified</th>
 							<th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -113,9 +113,9 @@ export default function AdminUsersPage() {
 									<td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">{user.name || "-"}</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">{user.email}</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">{user.phone || "-"}</td>
-									<td className="px-6 py-4 whitespace-nowrap text-sm">{user.city || "-"}</td>
+									{/* <td className="px-6 py-4 whitespace-nowrap text-sm">{user.city || "-"}</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">{user.postalCode || "-"}</td>
-									<td className="px-6 py-4 whitespace-nowrap text-sm">{user.address || "-"}</td>
+									<td className="px-6 py-4 whitespace-nowrap text-sm">{user.address || "-"}</td> */}
 									<td className="px-6 py-4 whitespace-nowrap text-sm">
 										<span className={`px-2 py-1 rounded text-xs font-medium ${user.role === "ADMIN" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>{user.role}</span>
 									</td>
