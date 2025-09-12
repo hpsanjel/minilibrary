@@ -17,6 +17,8 @@ export default function AuthForm() {
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [success, setSuccess] = useState("");
+	const [showResendVerification, setShowResendVerification] = useState(false);
+	const [resendingEmail, setResendingEmail] = useState(false);
 
 	// Redirect if already authenticated (in useEffect to avoid setState in render)
 	useEffect(() => {
@@ -30,11 +32,39 @@ export default function AuthForm() {
 	}, [status, session, router]);
 	if (status === "authenticated") return null;
 
+	const handleResendVerification = async () => {
+		setResendingEmail(true);
+		setError("");
+		setSuccess("");
+
+		try {
+			const res = await fetch("/api/auth/resend-verification", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ email }),
+			});
+
+			const data = await res.json();
+
+			if (res.ok) {
+				setSuccess("Verification email sent! Please check your inbox.");
+				setShowResendVerification(false);
+			} else {
+				setError(data.error || "Failed to resend verification email");
+			}
+		} catch (error) {
+			setError("Failed to resend verification email");
+		}
+
+		setResendingEmail(false);
+	};
+
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setLoading(true);
 		setError("");
 		setSuccess("");
+		setShowResendVerification(false);
 		if (isSignUp) {
 			// Call signup API
 			const res = await fetch("/api/auth/signup", {
@@ -67,7 +97,16 @@ export default function AuthForm() {
 			});
 			setLoading(false);
 			if (res?.error) {
-				setError("Invalid email or password");
+				if (res.error === "EMAIL_NOT_VERIFIED") {
+					setError("Your email is not verified. Please check your inbox or resend verification email.");
+					setShowResendVerification(true);
+				} else if (res.error === "INVALID_CREDENTIALS") {
+					setError("Invalid email or password");
+					setShowResendVerification(false);
+				} else {
+					setError("Sign in failed. Please try again.");
+					setShowResendVerification(false);
+				}
 			} else {
 				// Use router to redirect after successful login
 				router.replace("/admin/dashboard");
@@ -76,9 +115,18 @@ export default function AuthForm() {
 	};
 
 	return (
-		<form onSubmit={handleSubmit} className="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow space-y-6">
+		<form onSubmit={handleSubmit} className="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow space-y-6" autoComplete="off">
 			<h1 className="text-2xl font-bold text-center text-gray-900">{isSignUp ? "Sign Up" : "Sign In"}</h1>
-			{error && <p className="text-red-600 text-center">{error}</p>}
+			{error && (
+				<div className="text-red-600 text-center">
+					<p>{error}</p>
+					{showResendVerification && !isSignUp && (
+						<button type="button" onClick={handleResendVerification} disabled={resendingEmail} className="mt-2 text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition disabled:opacity-50">
+							{resendingEmail ? "Sending..." : "Resend Verification Email"}
+						</button>
+					)}
+				</div>
+			)}
 			{success && <p className="text-green-600 text-center">{success}</p>}
 			{isSignUp && (
 				<>
@@ -106,11 +154,11 @@ export default function AuthForm() {
 			)}
 			<div>
 				<label className="block mb-2 text-gray-700">Email</label>
-				<input type="email" className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" value={email} onChange={(e) => setEmail(e.target.value)} required />
+				<input type="email" className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="off" required />
 			</div>
 			<div>
 				<label className="block mb-2 text-gray-700">Password</label>
-				<input type="password" className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" value={password} onChange={(e) => setPassword(e.target.value)} required />
+				<input type="password" className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required />
 			</div>
 			<button type="submit" className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition disabled:opacity-50" disabled={loading}>
 				{loading ? (isSignUp ? "Signing up..." : "Signing in...") : isSignUp ? "Sign Up" : "Sign In"}
@@ -123,6 +171,8 @@ export default function AuthForm() {
 					onClick={() => {
 						setIsSignUp((v) => !v);
 						setError("");
+						setSuccess("");
+						setShowResendVerification(false);
 					}}
 				>
 					{isSignUp ? "Sign In" : "Sign Up"}

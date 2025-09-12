@@ -14,16 +14,21 @@ export const authOptions = {
 					if (user.verifiedUser === "Yes") {
 						return { id: user.id, email: user.email, name: user.name, role: user.role };
 					} else {
-						// Not verified
-						throw new Error("Please verify your email before signing in.");
+						// Not verified - throw specific error
+						throw new Error("EMAIL_NOT_VERIFIED");
 					}
 				}
-				return null;
+				// Invalid credentials
+				throw new Error("INVALID_CREDENTIALS");
 			},
 		}),
 	],
 	session: { strategy: "jwt" },
 	secret: process.env.NEXTAUTH_SECRET,
+	pages: {
+		signIn: "/auth/signin",
+		error: "/auth/signin", // Redirect errors back to sign in page
+	},
 	callbacks: {
 		async jwt({ token, user }) {
 			if (user) {

@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { sendVerificationEmail } from "@/lib/sendVerificationEmail";
+import { getBaseUrl } from "@/lib/getBaseUrl";
 
 export async function POST(req) {
 	try {
@@ -33,7 +34,7 @@ export async function POST(req) {
 		});
 
 		// Send verification email
-		const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+		const baseUrl = getBaseUrl(req);
 		const verificationUrl = `${baseUrl}/api/auth/verify?token=${token}`;
 		await sendVerificationEmail({
 			to: user.email,

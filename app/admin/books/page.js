@@ -2,13 +2,13 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 
 export default function AdminBooksPage() {
 	const [books, setBooks] = useState([]);
 	const [loading, setLoading] = useState(true);
-	const [showModal, setShowModal] = useState(false);
-	const [modalMode, setModalMode] = useState("add"); // "add" or "edit"
-	const [form, setForm] = useState({ id: null, title: "", author: "", isbn: "", copies: 1, coverUrl: "" });
+	const [showEditModal, setShowEditModal] = useState(false);
+	const [editForm, setEditForm] = useState({ id: null, title: "", author: "", isbn: "", copies: 1, coverUrl: "" });
 	const router = useRouter();
 
 	// Fetch books
@@ -24,48 +24,35 @@ export default function AdminBooksPage() {
 		fetchBooks();
 	}, []);
 
-	// Handle add/edit modal open
-	const openAddModal = () => {
-		setForm({ id: null, title: "", author: "", isbn: "", copies: 1, coverUrl: "" });
-		setModalMode("add");
-		setShowModal(true);
-	};
+	// Handle edit modal open
 	const openEditModal = (book) => {
-		setForm({
+		setEditForm({
 			...book,
 			isbn: book.isbn || "",
 			copies: book.copies || 1,
 			coverUrl: book.coverUrl || "",
 		});
-		setModalMode("edit");
-		setShowModal(true);
+		setShowEditModal(true);
 	};
 
-	// Handle form submit
-	const handleSubmit = async (e) => {
+	// Handle form submit for editing
+	const handleEditSubmit = async (e) => {
 		e.preventDefault();
 		const payload = {
-			title: form.title,
-			author: form.author,
-			isbn: form.isbn,
-			copies: form.copies,
-			coverUrl: form.coverUrl,
+			title: editForm.title,
+			author: editForm.author,
+			isbn: editForm.isbn,
+			copies: editForm.copies,
+			coverUrl: editForm.coverUrl,
 		};
 
-		if (modalMode === "add") {
-			await fetch("/api/books", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(payload),
-			});
-		} else {
-			await fetch("/api/books", {
-				method: "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ id: form.id, ...payload }),
-			});
-		}
-		setShowModal(false);
+		await fetch("/api/books", {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ id: editForm.id, ...payload }),
+		});
+
+		setShowEditModal(false);
 		fetchBooks();
 	};
 
@@ -84,8 +71,9 @@ export default function AdminBooksPage() {
 		<div className="p-6">
 			<div className="flex items-center justify-between mb-6">
 				<h1 className="text-2xl font-bold">Books</h1>
-				<button onClick={openAddModal} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow transition cursor-pointer">
-					+ Add Book
+				<button onClick={() => router.push("/admin/books/add")} className="flex text-center items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow transition cursor-pointer">
+					<Plus className="w-4 h-4" />
+					Add Books
 				</button>
 			</div>
 
@@ -145,23 +133,23 @@ export default function AdminBooksPage() {
 				</table>
 			</div>
 
-			{/* Modal for Add/Edit Book */}
-			{showModal && (
+			{/* Modal for Edit Book */}
+			{showEditModal && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
 					<div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-						<h2 className="text-xl font-bold mb-4">{modalMode === "add" ? "Add Book" : "Edit Book"}</h2>
-						<form onSubmit={handleSubmit} className="flex flex-col gap-3">
-							<input type="text" placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="border p-2 rounded" required />
-							<input type="text" placeholder="Author" value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })} className="border p-2 rounded" required />
-							<input type="text" placeholder="ISBN (optional)" value={form.isbn} onChange={(e) => setForm({ ...form, isbn: e.target.value })} className="border p-2 rounded" />
-							<input type="url" placeholder="Cover Image URL (optional)" value={form.coverUrl} onChange={(e) => setForm({ ...form, coverUrl: e.target.value })} className="border p-2 rounded" />
-							<input type="number" min={1} placeholder="Copies" value={form.copies} onChange={(e) => setForm({ ...form, copies: Number(e.target.value) })} className="border p-2 rounded" required />
+						<h2 className="text-xl font-bold mb-4">Edit Book</h2>
+						<form onSubmit={handleEditSubmit} className="flex flex-col gap-3">
+							<input type="text" placeholder="Title" value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="border p-2 rounded" required />
+							<input type="text" placeholder="Author" value={editForm.author} onChange={(e) => setEditForm({ ...editForm, author: e.target.value })} className="border p-2 rounded" required />
+							<input type="text" placeholder="ISBN (optional)" value={editForm.isbn} onChange={(e) => setEditForm({ ...editForm, isbn: e.target.value })} className="border p-2 rounded" />
+							<input type="url" placeholder="Cover Image URL (optional)" value={editForm.coverUrl} onChange={(e) => setEditForm({ ...editForm, coverUrl: e.target.value })} className="border p-2 rounded" />
+							<input type="number" min={1} placeholder="Copies" value={editForm.copies} onChange={(e) => setEditForm({ ...editForm, copies: Number(e.target.value) })} className="border p-2 rounded" required />
 
 							<div className="flex gap-2 mt-4">
 								<button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
-									{modalMode === "add" ? "Add" : "Update"}
+									Update
 								</button>
-								<button type="button" onClick={() => setShowModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded shadow">
+								<button type="button" onClick={() => setShowEditModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded shadow">
 									Cancel
 								</button>
 							</div>

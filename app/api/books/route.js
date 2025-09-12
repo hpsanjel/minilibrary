@@ -13,15 +13,34 @@ export async function GET() {
 			author: true,
 			isbn: true,
 			copies: true,
-			available: true,
 			coverUrl: true, // include cover URL
+			transactions: {
+				where: {
+					returned: false, // only count unreturned books
+				},
+			},
 		},
 		orderBy: {
 			title: "asc",
 		},
 	});
 
-	return new Response(JSON.stringify(books), {
+	// Calculate available copies for each book
+	const booksWithAvailable = books.map((book) => {
+		const borrowedCount = book.transactions.length;
+		const availableCopies = book.copies - borrowedCount;
+
+		return {
+			id: book.id,
+			title: book.title,
+			author: book.author,
+			isbn: book.isbn,
+			availableCopies: `${availableCopies} of ${book.copies} available`,
+			coverUrl: book.coverUrl,
+		};
+	});
+
+	return new Response(JSON.stringify(booksWithAvailable), {
 		headers: { "Content-Type": "application/json" },
 	});
 }

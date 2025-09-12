@@ -19,7 +19,16 @@ export default function AdminIssuePage() {
 			.then((data) => setUsers(data));
 		fetch("/api/books")
 			.then((res) => res.json())
-			.then((data) => setBooks(data.filter((b) => b.available && b.copies > 0)));
+			.then((data) => {
+				// Filter books that have available copies
+				const availableBooks = data.filter((b) => {
+					// Extract available count from "X of Y available" format
+					const match = b.availableCopies?.match(/^(\d+) of \d+ available$/);
+					const availableCount = match ? parseInt(match[1]) : 0;
+					return availableCount > 0;
+				});
+				setBooks(availableBooks);
+			});
 	}, []);
 
 	const filteredUsers = users.filter((u) => (u.name && u.name.toLowerCase().includes(userQuery.toLowerCase())) || (u.email && u.email.toLowerCase().includes(userQuery.toLowerCase())));
@@ -118,7 +127,7 @@ export default function AdminIssuePage() {
 									<div className="font-medium">
 										{b.title} <span className="text-xs text-gray-500">by {b.author}</span>
 									</div>
-									<div className="text-xs text-gray-500">Available: {b.copies}</div>
+									<div className="text-xs text-gray-500">{b.availableCopies}</div>
 								</li>
 							))}
 						</ul>

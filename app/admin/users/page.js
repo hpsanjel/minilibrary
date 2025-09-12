@@ -20,6 +20,7 @@ export default function AdminUsersPage() {
 	const handleDelete = async () => {
 		await fetch("/api/users", {
 			method: "DELETE",
+			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ id: selectedId }),
 		});
 		setIsModalOpen(false);
@@ -49,7 +50,17 @@ export default function AdminUsersPage() {
 		e.preventDefault();
 		await fetch("/api/users", {
 			method: "PATCH",
-			body: JSON.stringify({ id: form.id, name: form.name, phone: form.phone, city: form.city, postalCode: form.postalCode, address: form.address, role: form.role }),
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				id: form.id,
+				name: form.name,
+				phone: form.phone,
+				city: form.city,
+				postalCode: form.postalCode,
+				address: form.address,
+				role: form.role,
+				verifiedUser: form.verifiedUser,
+			}),
 		});
 		setShowModal(false);
 		fetchUsers();
@@ -69,6 +80,7 @@ export default function AdminUsersPage() {
 	const handleVerify = async (id) => {
 		await fetch("/api/users", {
 			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ id, verifiedUser: "Yes" }),
 		});
 		fetchUsers();

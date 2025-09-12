@@ -1,31 +1,43 @@
 import prisma from "@/lib/prisma";
+import { getBaseUrl } from "@/lib/getBaseUrl";
 
 export async function GET(req) {
 	const { searchParams } = new URL(req.url);
 	const token = searchParams.get("token");
+
+	// Get the correct base URL
+	const baseUrl = getBaseUrl(req);
+
 	if (!token) {
-		return new Response("Invalid verification link.", { status: 400 });
+		return Response.redirect(`${baseUrl}/auth/verify-error?reason=no-token`, 302);
 	}
-	// Find user with this token and not expired
-	const user = await prisma.user.findFirst({
-		where: {
-			verificationToken: token,
-			verificationTokenExpires: { gt: new Date() },
-		},
-	});
-	if (!user) {
-		return new Response("Verification link is invalid or expired.", { status: 400 });
+	try {
+		// Find user with this token and not expired
+		const user = await prisma.user.findFirst({
+			where: {
+				verificationToken: token,
+				verificationTokenExpires: { gt: new Date() },
+			},
+		});
+
+		if (!user) {
+			return Response.redirect(`${baseUrl}/auth/verify-error?reason=invalid-token`, 302);
+		}
+
+		// Mark user as verified
+		await prisma.user.update({
+			where: { id: user.id },
+			data: {
+				verifiedUser: "Yes",
+				verificationToken: null,
+				verificationTokenExpires: null,
+			},
+		});
+
+		// Redirect to success page
+		return Response.redirect(`${baseUrl}/auth/verify-success`, 302);
+	} catch (error) {
+		console.error("Verification error:", error);
+		return Response.redirect(`${baseUrl}/auth/verify-error?reason=server-error`, 302);
 	}
-	// Mark user as verified
-	await prisma.user.update({
-		where: { id: user.id },
-		data: {
-			verifiedUser: "Yes",
-			verificationToken: null,
-			verificationTokenExpires: null,
-		},
-	});
-	// Redirect to a friendly verify-success page (absolute URL required)
-	const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-	return Response.redirect(`${baseUrl}/auth/verify-success`, 302);
 }

@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { sendBookIssuedEmail } from "@/lib/sendBookIssuedEmail";
+import sendBookReturnedEmail from "@/lib/sendBookReturnedEmail";
 
 export async function POST(req) {
 	try {
@@ -65,7 +66,7 @@ export async function GET() {
 
 export async function PATCH(req) {
 	try {
-		const { id, action } = await req.json();
+		const { id, action, sendEmailConfirmation } = await req.json();
 
 		// Find the transaction to get the bookId
 		const transactionRecord = await prisma.transaction.findUnique({
@@ -94,22 +95,56 @@ export async function PATCH(req) {
 				const daysLate = Math.ceil((new Date() - new Date(transactionRecord.deadline)) / (1000 * 60 * 60 * 24));
 				fine = daysLate * 5;
 			}
+
+			// Get user and book data for email
+			const user = await prisma.user.findUnique({
+				where: { id: transactionRecord.userId },
+			});
+			const book = await prisma.book.findUnique({
+				where: { id: transactionRecord.bookId },
+			});
+
 			// Mark transaction as returned, set fine, and set returnedAt
 			const transaction = await prisma.transaction.update({
 				where: { id },
 				data: { returned: true, fine, returnedAt: new Date() },
 			});
+
 			// Increment book copies and update availability if needed
-			const book = await prisma.book.update({
+			const updatedBook = await prisma.book.update({
 				where: { id: transactionRecord.bookId },
 				data: { copies: { increment: 1 } },
 			});
-			if (book.copies > 0 && !book.available) {
+			if (updatedBook.copies > 0 && !updatedBook.available) {
 				await prisma.book.update({
-					where: { id: book.id },
+					where: { id: updatedBook.id },
 					data: { available: true },
 				});
 			}
+
+			// Send return confirmation email only if requested
+			if (sendEmailConfirmation) {
+				try {
+					await sendBookReturnedEmail({
+						to: user.email,
+						userName: user.name || user.email,
+						bookTitle: book.title,
+						bookAuthor: book.author,
+						returnedAt: transaction.returnedAt.toLocaleString("en-GB", {
+							year: "numeric",
+							month: "short",
+							day: "numeric",
+							hour: "2-digit",
+							minute: "2-digit",
+						}),
+						fine: fine,
+						transactionId: transaction.id,
+					});
+				} catch (emailErr) {
+					console.error("Failed to send return confirmation email", emailErr);
+				}
+			}
+
 			return new Response(JSON.stringify(transaction));
 		}
 
@@ -153,6 +188,20 @@ export async function PATCH(req) {
 				where: { id: transactionRecord.bookId },
 				data: { copies: { decrement: 1 } },
 			});
+
+			// Send confirmation email for re-issue
+			try {
+				await sendBookIssuedEmail({
+					to: user.email,
+					userName: user.name || user.email,
+					bookTitle: book.title,
+					bookAuthor: book.author,
+					deadline: newDeadline.toLocaleString("en-GB", { year: "numeric", month: "short", day: "numeric" }),
+					transactionId: newTransaction.id,
+				});
+			} catch (emailErr) {
+				console.error("Failed to send re-issue confirmation email", emailErr);
+			}
 
 			return new Response(JSON.stringify(newTransaction));
 		}
