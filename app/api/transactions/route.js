@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { sendBookIssuedEmail } from "@/lib/sendBookIssuedEmail";
 import sendBookReturnedEmail from "@/lib/sendBookReturnedEmail";
+import sendFineClearedEmail from "@/lib/sendFineClearedEmail";
 
 export async function POST(req) {
 	try {
@@ -80,11 +81,47 @@ export async function PATCH(req) {
 		}
 
 		if (action === "clearFine") {
-			// Set fine to 0 for this transaction and clear returnedAt if needed
+			// Get user and book data for email before clearing the fine
+			const user = await prisma.user.findUnique({
+				where: { id: transactionRecord.userId },
+			});
+			const book = await prisma.book.findUnique({
+				where: { id: transactionRecord.bookId },
+			});
+
+			if (!user || !book) {
+				return new Response(JSON.stringify({ error: "User or book not found" }), {
+					status: 404,
+				});
+			}
+
+			// Store the fine amount before clearing it
+			const clearedFineAmount = transactionRecord.fine;
+
+			// Set fine to 0 for this transaction
 			const transaction = await prisma.transaction.update({
 				where: { id },
 				data: { fine: 0 },
 			});
+
+			// Send fine cleared confirmation email
+			if (clearedFineAmount > 0) {
+				try {
+					await sendFineClearedEmail({
+						to: user.email,
+						userName: user.name || user.email,
+						bookTitle: book.title,
+						bookAuthor: book.author,
+						fineAmount: clearedFineAmount,
+						transactionId: transaction.id,
+					});
+					console.log(`Fine cleared email sent to ${user.email} for transaction ${transaction.id}`);
+				} catch (emailErr) {
+					console.error("Failed to send fine cleared email:", emailErr);
+					// Don't fail the request if email fails
+				}
+			}
+
 			return new Response(JSON.stringify(transaction));
 		}
 

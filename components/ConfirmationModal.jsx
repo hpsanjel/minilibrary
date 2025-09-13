@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 
-export default function ConfirmationModal({ isOpen, onClose, onConfirm, title, message, confirmText = "Delete", confirmClass = "bg-red-600 text-white hover:bg-red-700" }) {
+export default function ConfirmationModal({ isOpen, onClose, onConfirm, title, message, confirmText = "Delete", cancelText = "Cancel", confirmClass = "bg-red-600 text-white hover:bg-red-700", hideCancel = false }) {
 	if (!isOpen) return null;
 
 	return (
@@ -14,9 +14,11 @@ export default function ConfirmationModal({ isOpen, onClose, onConfirm, title, m
 				<h2 className="text-xl font-bold mb-2">{title}</h2>
 				<div className="text-gray-600 mb-6">{message}</div>
 				<div className="flex justify-end space-x-3">
-					<button onClick={onClose} className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100">
-						Cancel
-					</button>
+					{!hideCancel && (
+						<button onClick={onClose} className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100">
+							{cancelText}
+						</button>
+					)}
 					<button onClick={onConfirm} className={`px-4 py-2 rounded-lg ${confirmClass}`}>
 						{confirmText}
 					</button>
