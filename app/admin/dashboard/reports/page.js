@@ -9,6 +9,18 @@ export default function ReportsPage() {
 
 	const reports = ["users", "books", "issues", "returns", "defaulters"];
 
+	// Get report title for print
+	const getReportTitle = (reportType) => {
+		const titles = {
+			users: "Users Report",
+			books: "Books Report",
+			issues: "Book Issues Report",
+			returns: "Book Returns Report",
+			defaulters: "Defaulters Report",
+		};
+		return titles[reportType] || `${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`;
+	};
+
 	// Header mappings for meaningful display
 	const getHeaderLabel = (key, reportType) => {
 		const headerMappings = {
@@ -197,131 +209,272 @@ export default function ReportsPage() {
 
 	return (
 		<div className="p-6">
-			<h1 className="text-2xl font-bold mb-6">Admin Reports</h1>
+			{/* Print styles */}
+			<style jsx>{`
+				@media print {
+					/* Hide screen elements */
+					.no-print {
+						display: none !important;
+					}
 
-			{/* Tabs */}
-			<div className="flex space-x-4 mb-6">
-				{reports.map((r) => (
-					<button key={r} onClick={() => setActiveReport(r)} className={`px-4 py-2 rounded-lg capitalize ${activeReport === r ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}>
-						{r}
-					</button>
-				))}
-			</div>
+					/* Show print content */
+					.print-content {
+						display: block !important;
+						position: absolute;
+						left: 0;
+						top: 0;
+						width: 100%;
+						min-height: 100vh;
+						background: white;
+						padding: 15px;
+						font-family: Arial, sans-serif;
+					}
 
-			{/* Filters (still generic) */}
-			<div className="flex space-x-4 mb-6">
-				<input type="date" className="border p-2 rounded" />
-				<input type="date" className="border p-2 rounded" />
-				<select className="border p-2 rounded">
-					<option>All</option>
-					<option>Active</option>
-					<option>Overdue</option>
-					<option>Returned</option>
-				</select>
-			</div>
+					/* Page setup for A4 */
+					@page {
+						size: A4 portrait;
+						margin: 0.5in;
+					}
 
-			{/* Actions */}
-			<div className="flex justify-end mb-4 space-x-3">
-				<button onClick={() => handleDownload("csv")} className="flex items-center px-4 py-2 border rounded-lg hover:bg-gray-100">
-					<FileDown className="w-4 h-4 mr-2" /> Export CSV
-				</button>
-				<button onClick={() => handleDownload("pdf")} className="flex items-center px-4 py-2 border rounded-lg hover:bg-gray-100">
-					<FileDown className="w-4 h-4 mr-2" /> Export PDF
-				</button>
-				<button onClick={handlePrint} className="flex items-center px-4 py-2 border rounded-lg hover:bg-gray-100">
-					<Printer className="w-4 h-4 mr-2" /> Print
-				</button>
-			</div>
+					/* Header styling for print */
+					.print-header {
+						text-align: center;
+						margin-bottom: 20px;
+						border-bottom: 2px solid #000;
+						padding-bottom: 10px;
+					}
 
-			{/* Table */}
-			<div className="overflow-x-auto border rounded-lg">
-				{loading ? (
-					<p className="p-4">Loading {activeReport}...</p>
-				) : data.length === 0 ? (
-					<div className="p-6 text-center">
-						{activeReport === "defaulters" ? (
-							<div className="bg-green-50 border border-green-200 rounded-lg p-4">
-								<div className="text-green-700 font-medium text-lg mb-2">🎉 Great News!</div>
-								<p className="text-green-600">No defaulters found. All books are returned on time or within the deadline.</p>
-							</div>
-						) : (
-							<p className="text-gray-500">No {activeReport} found.</p>
-						)}
-					</div>
-				) : (
-					<table className="w-full text-left border-collapse">
+					.print-title {
+						font-size: 20px;
+						font-weight: bold;
+						margin: 0 0 5px 0;
+					}
+
+					.print-subtitle {
+						font-size: 16px;
+						margin: 0 0 5px 0;
+					}
+
+					.print-date {
+						font-size: 12px;
+						color: #666;
+						margin: 0;
+					}
+
+					/* Table styling for print */
+					.print-table {
+						width: 100%;
+						border-collapse: collapse;
+						font-size: 10px;
+						table-layout: fixed;
+						background: white;
+					}
+
+					.print-table th,
+					.print-table td {
+						border: 1px solid #000;
+						padding: 4px 2px;
+						text-align: left;
+						overflow: hidden;
+						text-overflow: ellipsis;
+						white-space: nowrap;
+						background: white;
+					}
+
+					.print-table th {
+						background-color: #f0f0f0;
+						font-weight: bold;
+						font-size: 9px;
+					}
+
+					/* Column widths */
+					.print-table th:first-child,
+					.print-table td:first-child {
+						width: 8%;
+					}
+				}
+			`}</style>
+
+			{/* Print content - only visible when printing */}
+			<div className="print-content" style={{ display: "none" }}>
+				<div className="print-header">
+					<h1 className="print-title">Mini Library Management System</h1>
+					<h2 className="print-subtitle">{getReportTitle(activeReport)}</h2>
+					<p className="print-date">Generated on: {new Date().toLocaleDateString()}</p>
+				</div>
+
+				{!loading && data.length > 0 && (
+					<table className="print-table">
 						<thead>
-							<tr className="bg-gray-100">
-								{(activeReport === "users" || activeReport === "books" || activeReport === "issues" || activeReport === "returns" || activeReport === "defaulters") && <th className="p-3 border font-medium text-gray-700">S.N.</th>}
+							<tr>
+								{(activeReport === "users" || activeReport === "books" || activeReport === "issues" || activeReport === "returns" || activeReport === "defaulters") && <th>S.N.</th>}
 								{activeReport === "issues"
-									? getIssuesColumnOrder(data).map((key) => (
-											<th key={key} className="p-3 border font-medium text-gray-700">
-												{getHeaderLabel(key, activeReport)}
-											</th>
-									  ))
+									? getIssuesColumnOrder(data).map((key) => <th key={key}>{getHeaderLabel(key, activeReport)}</th>)
 									: activeReport === "returns"
-									? getReturnsColumnOrder(data).map((key) => (
-											<th key={key} className="p-3 border font-medium text-gray-700">
-												{getHeaderLabel(key, activeReport)}
-											</th>
-									  ))
+									? getReturnsColumnOrder(data).map((key) => <th key={key}>{getHeaderLabel(key, activeReport)}</th>)
 									: activeReport === "defaulters"
-									? getDefaultersColumnOrder(data).map((key) => (
-											<th key={key} className="p-3 border font-medium text-gray-700">
-												{getHeaderLabel(key, activeReport)}
-											</th>
-									  ))
+									? getDefaultersColumnOrder(data).map((key) => <th key={key}>{getHeaderLabel(key, activeReport)}</th>)
 									: Object.keys(data[0])
 											.filter((key, index, arr) => {
 												if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
 												if (activeReport === "users") return key !== "id";
 												return true;
 											})
-											.map((key) => (
-												<th key={key} className="p-3 border font-medium text-gray-700">
-													{getHeaderLabel(key, activeReport)}
-												</th>
-											))}
+											.map((key) => <th key={key}>{getHeaderLabel(key, activeReport)}</th>)}
 							</tr>
 						</thead>
 						<tbody>
 							{data.map((row, i) => (
-								<tr key={i} className="hover:bg-gray-50">
-									{(activeReport === "users" || activeReport === "books" || activeReport === "issues" || activeReport === "returns" || activeReport === "defaulters") && <td className="p-3 border font-medium">{i + 1}</td>}
+								<tr key={i}>
+									{(activeReport === "users" || activeReport === "books" || activeReport === "issues" || activeReport === "returns" || activeReport === "defaulters") && <td>{i + 1}</td>}
 									{activeReport === "issues"
-										? getIssuesColumnOrder(data).map((key, j) => (
-												<td key={j} className="p-3 border">
-													{formatCellValue(key, row[key], activeReport)}
-												</td>
-										  ))
+										? getIssuesColumnOrder(data).map((key, j) => <td key={j}>{formatCellValue(key, row[key], activeReport)}</td>)
 										: activeReport === "returns"
-										? getReturnsColumnOrder(data).map((key, j) => (
-												<td key={j} className="p-3 border">
-													{formatCellValue(key, row[key], activeReport)}
-												</td>
-										  ))
+										? getReturnsColumnOrder(data).map((key, j) => <td key={j}>{formatCellValue(key, row[key], activeReport)}</td>)
 										: activeReport === "defaulters"
-										? getDefaultersColumnOrder(data).map((key, j) => (
-												<td key={j} className="p-3 border">
-													{formatCellValue(key, row[key], activeReport)}
-												</td>
-										  ))
+										? getDefaultersColumnOrder(data).map((key, j) => <td key={j}>{formatCellValue(key, row[key], activeReport)}</td>)
 										: Object.entries(row)
 												.filter(([key, val], index, arr) => {
 													if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
 													if (activeReport === "users") return key !== "id";
 													return true;
 												})
-												.map(([key, val], j) => (
-													<td key={j} className="p-3 border">
-														{formatCellValue(key, val, activeReport)}
-													</td>
-												))}
+												.map(([key, val], j) => <td key={j}>{formatCellValue(key, val, activeReport)}</td>)}
 								</tr>
 							))}
 						</tbody>
 					</table>
 				)}
+			</div>
+
+			{/* Screen content */}
+			<div className="no-print">
+				<h1 className="text-2xl font-bold mb-6">Admin Reports</h1>
+
+				{/* Tabs */}
+				<div className="flex space-x-4 mb-6">
+					{reports.map((r) => (
+						<button key={r} onClick={() => setActiveReport(r)} className={`px-4 py-2 rounded-lg capitalize ${activeReport === r ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}>
+							{r}
+						</button>
+					))}
+				</div>
+
+				{/* Filters (still generic) */}
+				<div className="flex space-x-4 mb-6">
+					<input type="date" className="border p-2 rounded" />
+					<input type="date" className="border p-2 rounded" />
+					<select className="border p-2 rounded">
+						<option>All</option>
+						<option>Active</option>
+						<option>Overdue</option>
+						<option>Returned</option>
+					</select>
+				</div>
+
+				{/* Actions */}
+				<div className="flex justify-end mb-4 space-x-3">
+					<button onClick={() => handleDownload("csv")} className="flex items-center px-4 py-2 border rounded-lg hover:bg-gray-100">
+						<FileDown className="w-4 h-4 mr-2" /> Export CSV
+					</button>
+					<button onClick={() => handleDownload("pdf")} className="flex items-center px-4 py-2 border rounded-lg hover:bg-gray-100">
+						<FileDown className="w-4 h-4 mr-2" /> Export PDF
+					</button>
+					<button onClick={handlePrint} className="flex items-center px-4 py-2 border rounded-lg hover:bg-gray-100">
+						<Printer className="w-4 h-4 mr-2" /> Print
+					</button>
+				</div>
+
+				{/* Table */}
+				<div className="overflow-x-auto border rounded-lg">
+					{loading ? (
+						<p className="p-4">Loading {activeReport}...</p>
+					) : data.length === 0 ? (
+						<div className="p-6 text-center">
+							{activeReport === "defaulters" ? (
+								<div className="bg-green-50 border border-green-200 rounded-lg p-4">
+									<div className="text-green-700 font-medium text-lg mb-2">🎉 Great News!</div>
+									<p className="text-green-600">No defaulters found. All books are returned on time or within the deadline.</p>
+								</div>
+							) : (
+								<p className="text-gray-500">No {activeReport} found.</p>
+							)}
+						</div>
+					) : (
+						<table className="w-full text-left border-collapse">
+							<thead>
+								<tr className="bg-gray-100">
+									{(activeReport === "users" || activeReport === "books" || activeReport === "issues" || activeReport === "returns" || activeReport === "defaulters") && <th className="p-3 border font-medium text-gray-700">S.N.</th>}
+									{activeReport === "issues"
+										? getIssuesColumnOrder(data).map((key) => (
+												<th key={key} className="p-3 border font-medium text-gray-700">
+													{getHeaderLabel(key, activeReport)}
+												</th>
+										  ))
+										: activeReport === "returns"
+										? getReturnsColumnOrder(data).map((key) => (
+												<th key={key} className="p-3 border font-medium text-gray-700">
+													{getHeaderLabel(key, activeReport)}
+												</th>
+										  ))
+										: activeReport === "defaulters"
+										? getDefaultersColumnOrder(data).map((key) => (
+												<th key={key} className="p-3 border font-medium text-gray-700">
+													{getHeaderLabel(key, activeReport)}
+												</th>
+										  ))
+										: Object.keys(data[0])
+												.filter((key, index, arr) => {
+													if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
+													if (activeReport === "users") return key !== "id";
+													return true;
+												})
+												.map((key) => (
+													<th key={key} className="p-3 border font-medium text-gray-700">
+														{getHeaderLabel(key, activeReport)}
+													</th>
+												))}
+								</tr>
+							</thead>
+							<tbody>
+								{data.map((row, i) => (
+									<tr key={i} className="hover:bg-gray-50">
+										{(activeReport === "users" || activeReport === "books" || activeReport === "issues" || activeReport === "returns" || activeReport === "defaulters") && <td className="p-3 border font-medium">{i + 1}</td>}
+										{activeReport === "issues"
+											? getIssuesColumnOrder(data).map((key, j) => (
+													<td key={j} className="p-3 border">
+														{formatCellValue(key, row[key], activeReport)}
+													</td>
+											  ))
+											: activeReport === "returns"
+											? getReturnsColumnOrder(data).map((key, j) => (
+													<td key={j} className="p-3 border">
+														{formatCellValue(key, row[key], activeReport)}
+													</td>
+											  ))
+											: activeReport === "defaulters"
+											? getDefaultersColumnOrder(data).map((key, j) => (
+													<td key={j} className="p-3 border">
+														{formatCellValue(key, row[key], activeReport)}
+													</td>
+											  ))
+											: Object.entries(row)
+													.filter(([key, val], index, arr) => {
+														if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
+														if (activeReport === "users") return key !== "id";
+														return true;
+													})
+													.map(([key, val], j) => (
+														<td key={j} className="p-3 border">
+															{formatCellValue(key, val, activeReport)}
+														</td>
+													))}
+									</tr>
+								))}
+							</tbody>
+						</table>
+					)}
+				</div>
 			</div>
 		</div>
 	);
