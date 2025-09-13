@@ -57,7 +57,60 @@ export async function PATCH(req) {
 export async function DELETE(req) {
 	const { id } = await req.json();
 	const userId = parseInt(id);
-	await prisma.transaction.deleteMany({ where: { userId } });
-	await prisma.user.delete({ where: { id: userId } });
-	return new Response(JSON.stringify({ success: true }));
+
+	try {
+		// Check if user has active borrows
+		const activeBorrows = await prisma.transaction.count({
+			where: {
+				userId: userId,
+				returned: false,
+			},
+		});
+
+		if (activeBorrows > 0) {
+			return new Response(
+				JSON.stringify({
+					error: "Cannot delete user with active borrows",
+					activeBorrows,
+				}),
+				{ status: 400 }
+			);
+		}
+
+		// Check if user has outstanding fines
+		const outstandingFines = await prisma.transaction.findMany({
+			where: {
+				userId: userId,
+				fine: { gt: 0 },
+			},
+		});
+
+		if (outstandingFines.length > 0) {
+			const totalFines = outstandingFines.reduce((sum, t) => sum + t.fine, 0);
+			return new Response(
+				JSON.stringify({
+					error: "Cannot delete user with outstanding fines",
+					totalFines,
+					fineCount: outstandingFines.length,
+				}),
+				{ status: 400 }
+			);
+		}
+
+		// Delete all user transactions (history) first
+		await prisma.transaction.deleteMany({ where: { userId } });
+
+		// Delete the user
+		await prisma.user.delete({ where: { id: userId } });
+
+		return new Response(
+			JSON.stringify({
+				success: true,
+				message: "User deleted successfully",
+			})
+		);
+	} catch (error) {
+		console.error("Error deleting user:", error);
+		return new Response(JSON.stringify({ error: "Failed to delete user" }), { status: 500 });
+	}
 }

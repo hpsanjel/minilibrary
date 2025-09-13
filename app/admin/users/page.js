@@ -1,5 +1,6 @@
 "use client";
 import ConfirmationModal from "@/components/ConfirmationModal";
+import UserDeletionModal from "@/components/UserDeletionModal";
 import { useEffect, useState } from "react";
 
 export default function AdminUsersPage() {
@@ -10,23 +11,38 @@ export default function AdminUsersPage() {
 	const [form, setForm] = useState({ id: null, name: "", email: "", phone: "", city: "", postalCode: "", address: "", role: "STUDENT" });
 	const [verifyingUsers, setVerifyingUsers] = useState(new Set()); // Track users being verified
 
-	const [isModalOpen, setIsModalOpen] = useState(false);
-	const [selectedId, setSelectedId] = useState(null);
+	const [isUserDeletionModalOpen, setIsUserDeletionModalOpen] = useState(false);
+	const [selectedUserForDeletion, setSelectedUserForDeletion] = useState(null);
 
-	const openDeleteModal = (id) => {
-		setSelectedId(id);
-		setIsModalOpen(true);
+	const openDeleteModal = (user) => {
+		setSelectedUserForDeletion(user);
+		setIsUserDeletionModalOpen(true);
 	};
 
 	const handleDelete = async () => {
-		await fetch("/api/users", {
-			method: "DELETE",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ id: selectedId }),
-		});
-		setIsModalOpen(false);
-		setSelectedId(null);
-		fetchUsers(); // refresh list
+		if (!selectedUserForDeletion) return;
+
+		try {
+			const response = await fetch("/api/users", {
+				method: "DELETE",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ id: selectedUserForDeletion.id }),
+			});
+
+			const result = await response.json();
+
+			if (response.ok) {
+				setIsUserDeletionModalOpen(false);
+				setSelectedUserForDeletion(null);
+				fetchUsers(); // refresh list
+			} else {
+				console.error("Failed to delete user:", result.error);
+				alert(result.error || "Failed to delete user");
+			}
+		} catch (error) {
+			console.error("Error deleting user:", error);
+			alert("Failed to delete user. Please try again.");
+		}
 	};
 
 	const fetchUsers = async () => {
@@ -153,7 +169,7 @@ export default function AdminUsersPage() {
 										<button onClick={() => openEditModal(user)} className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded shadow text-xs">
 											Edit
 										</button>
-										<button onClick={() => openDeleteModal(user?.id)} className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded shadow text-xs">
+										<button onClick={() => openDeleteModal(user)} className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded shadow text-xs">
 											Delete
 										</button>
 										{user.verifiedUser !== "Yes" && (
@@ -171,8 +187,6 @@ export default function AdminUsersPage() {
 												)}
 											</button>
 										)}
-										{/* Confirmation Modal */}
-										<ConfirmationModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onConfirm={handleDelete} title="Delete User" message="Are you sure you want to delete this user?" />
 									</td>
 								</tr>
 							))
@@ -219,6 +233,9 @@ export default function AdminUsersPage() {
 					</div>
 				</div>
 			)}
+
+			{/* User Deletion Modal */}
+			<UserDeletionModal isOpen={isUserDeletionModalOpen} onClose={() => setIsUserDeletionModalOpen(false)} onConfirm={handleDelete} user={selectedUserForDeletion} />
 		</div>
 	);
 }

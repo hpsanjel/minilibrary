@@ -7,7 +7,12 @@ export default function ReportsPage() {
 	const [data, setData] = useState([]);
 	const [loading, setLoading] = useState(false);
 
-	const reports = ["users", "books", "issues", "returns", "defaulters"];
+	// Fine reports state
+	const [finePayments, setFinePayments] = useState([]);
+	const [fineSummary, setFineSummary] = useState({});
+	const [fineFilter, setFineFilter] = useState("all");
+
+	const reports = ["users", "books", "issues", "returns", "defaulters", "fines"];
 
 	// Get report title for print
 	const getReportTitle = (reportType) => {
@@ -185,18 +190,58 @@ export default function ReportsPage() {
 		const fetchData = async () => {
 			setLoading(true);
 			try {
-				const res = await fetch(`/api/${activeReport}`);
-				if (!res.ok) throw new Error("Failed to fetch report");
-				const json = await res.json();
-				setData(json);
+				if (activeReport === "fines") {
+					// Fetch fine payments data
+					const res = await fetch("/api/fine-payments");
+					if (!res.ok) throw new Error("Failed to fetch fine payments");
+					const json = await res.json();
+					setFinePayments(json.payments || []);
+					setFineSummary(json.summary || {});
+				} else {
+					// Fetch regular report data
+					const res = await fetch(`/api/${activeReport}`);
+					if (!res.ok) throw new Error("Failed to fetch report");
+					const json = await res.json();
+					setData(json);
+				}
 			} catch (error) {
 				console.error("Error fetching report:", error);
-				setData([]);
+				if (activeReport === "fines") {
+					setFinePayments([]);
+					setFineSummary({});
+				} else {
+					setData([]);
+				}
 			}
 			setLoading(false);
 		};
 		fetchData();
 	}, [activeReport]);
+
+	// Fine payments filtering function
+	const getFilteredPayments = () => {
+		if (fineFilter === "all") return finePayments;
+
+		const now = new Date();
+		const filterDate = new Date();
+
+		switch (fineFilter) {
+			case "today":
+				filterDate.setHours(0, 0, 0, 0);
+				return finePayments.filter((payment) => new Date(payment.paidAt) >= filterDate);
+			case "week":
+				filterDate.setDate(now.getDate() - 7);
+				return finePayments.filter((payment) => new Date(payment.paidAt) >= filterDate);
+			case "month":
+				filterDate.setMonth(now.getMonth() - 1);
+				return finePayments.filter((payment) => new Date(payment.paidAt) >= filterDate);
+			default:
+				return finePayments;
+		}
+	};
+
+	const filteredPayments = getFilteredPayments();
+	const filteredTotal = filteredPayments.reduce((sum, payment) => sum + payment.amount, 0);
 
 	const handleDownload = (format) => {
 		alert(`Downloading ${activeReport} report as ${format}`);
@@ -361,7 +406,7 @@ export default function ReportsPage() {
 				</div>
 
 				{/* Filters (still generic) */}
-				<div className="flex space-x-4 mb-6">
+				{/* <div className="flex space-x-4 mb-6">
 					<input type="date" className="border p-2 rounded" />
 					<input type="date" className="border p-2 rounded" />
 					<select className="border p-2 rounded">
@@ -370,7 +415,7 @@ export default function ReportsPage() {
 						<option>Overdue</option>
 						<option>Returned</option>
 					</select>
-				</div>
+				</div> */}
 
 				{/* Actions */}
 				<div className="flex justify-end mb-4 space-x-3">
@@ -389,6 +434,138 @@ export default function ReportsPage() {
 				<div className="overflow-x-auto border rounded-lg">
 					{loading ? (
 						<p className="p-4">Loading {activeReport}...</p>
+					) : activeReport === "fines" ? (
+						// Fine Reports Content
+						<div className="p-6">
+							{/* Summary Cards */}
+							<div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+								<div className="bg-white rounded-lg shadow p-6">
+									<div className="flex items-center">
+										<div className="p-2 bg-blue-100 rounded-lg">
+											<svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+											</svg>
+										</div>
+										<div className="ml-4">
+											<h3 className="text-sm font-medium text-gray-500">Total Revenue</h3>
+											<p className="text-2xl font-bold text-gray-900">{fineSummary.totalAmount || 0} NOK</p>
+										</div>
+									</div>
+								</div>
+
+								<div className="bg-white rounded-lg shadow p-6">
+									<div className="flex items-center">
+										<div className="p-2 bg-green-100 rounded-lg">
+											<svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+											</svg>
+										</div>
+										<div className="ml-4">
+											<h3 className="text-sm font-medium text-gray-500">Total Payments</h3>
+											<p className="text-2xl font-bold text-gray-900">{fineSummary.totalPayments || 0}</p>
+										</div>
+									</div>
+								</div>
+
+								<div className="bg-white rounded-lg shadow p-6">
+									<div className="flex items-center">
+										<div className="p-2 bg-purple-100 rounded-lg">
+											<svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+											</svg>
+										</div>
+										<div className="ml-4">
+											<h3 className="text-sm font-medium text-gray-500">Unique Users</h3>
+											<p className="text-2xl font-bold text-gray-900">{fineSummary.uniqueUsers || 0}</p>
+										</div>
+									</div>
+								</div>
+
+								<div className="bg-white rounded-lg shadow p-6">
+									<div className="flex items-center">
+										<div className="p-2 bg-yellow-100 rounded-lg">
+											<svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+											</svg>
+										</div>
+										<div className="ml-4">
+											<h3 className="text-sm font-medium text-gray-500">Average Payment</h3>
+											<p className="text-2xl font-bold text-gray-900">{Math.round(fineSummary.averagePayment || 0)} NOK</p>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							{/* Filter Controls */}
+							<div className="bg-white rounded-lg shadow mb-6">
+								<div className="p-6 border-b border-gray-200">
+									<h2 className="text-lg font-semibold mb-4">Payment History</h2>
+									<div className="flex space-x-4">
+										{[
+											{ key: "all", label: "All Time" },
+											{ key: "today", label: "Today" },
+											{ key: "week", label: "Last Week" },
+											{ key: "month", label: "Last Month" },
+										].map((option) => (
+											<button key={option.key} onClick={() => setFineFilter(option.key)} className={`px-4 py-2 rounded-lg text-sm font-medium ${fineFilter === option.key ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
+												{option.label}
+											</button>
+										))}
+									</div>
+									{fineFilter !== "all" && (
+										<div className="mt-4 p-3 bg-blue-50 rounded-lg">
+											<p className="text-sm text-blue-800">
+												<strong>Filtered Results:</strong> {filteredPayments.length} payments totaling {filteredTotal} NOK
+											</p>
+										</div>
+									)}
+								</div>
+
+								{/* Payment Table */}
+								<div className="overflow-x-auto">
+									<table className="min-w-full divide-y divide-gray-200">
+										<thead className="bg-gray-50">
+											<tr>
+												<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+												<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
+												<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Book</th>
+												<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+												<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Processed By</th>
+												<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+											</tr>
+										</thead>
+										<tbody className="bg-white divide-y divide-gray-200">
+											{filteredPayments.length === 0 ? (
+												<tr>
+													<td colSpan={6} className="text-center py-8 text-gray-400">
+														No payments found for the selected period.
+													</td>
+												</tr>
+											) : (
+												filteredPayments.map((payment) => (
+													<tr key={payment.id} className="hover:bg-gray-50">
+														<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+															{new Date(payment.paidAt).toLocaleDateString()} at {new Date(payment.paidAt).toLocaleTimeString()}
+														</td>
+														<td className="px-6 py-4 whitespace-nowrap">
+															<div className="text-sm font-medium text-gray-900">{payment.user.name || "N/A"}</div>
+															<div className="text-sm text-gray-500">{payment.user.email}</div>
+														</td>
+														<td className="px-6 py-4 whitespace-nowrap">
+															<div className="text-sm font-medium text-gray-900">{payment.transaction.book.title}</div>
+															<div className="text-sm text-gray-500">by {payment.transaction.book.author}</div>
+														</td>
+														<td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">{payment.amount} NOK</td>
+														<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{payment.processedBy || "N/A"}</td>
+														<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{payment.notes || "-"}</td>
+													</tr>
+												))
+											)}
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
 					) : data.length === 0 ? (
 						<div className="p-6 text-center">
 							{activeReport === "defaulters" ? (

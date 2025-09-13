@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import { sendBookIssuedEmail } from "@/lib/sendBookIssuedEmail";
 import sendBookReturnedEmail from "@/lib/sendBookReturnedEmail";
-import sendFineClearedEmail from "@/lib/sendFineClearedEmail";
+import sendFineClearedEmail from "@/lib/sendFineClearedEmailEnhanced";
 
 export async function POST(req) {
 	try {
@@ -67,9 +67,96 @@ export async function GET() {
 
 export async function PATCH(req) {
 	try {
-		const { id, action, sendEmailConfirmation } = await req.json();
+		const requestData = await req.json();
+		const { id, action, sendEmailConfirmation, userId } = requestData;
 
-		// Find the transaction to get the bookId
+		if (action === "clearAllUserFines") {
+			// Handle clearing all fines for a specific user
+			if (!userId) {
+				return new Response(JSON.stringify({ error: "User ID is required" }), {
+					status: 400,
+				});
+			}
+
+			// Get user data
+			const user = await prisma.user.findUnique({
+				where: { id: parseInt(userId) },
+			});
+
+			if (!user) {
+				return new Response(JSON.stringify({ error: "User not found" }), {
+					status: 404,
+				});
+			}
+
+			// Get all transactions with outstanding fines for this user
+			const fineTransactions = await prisma.transaction.findMany({
+				where: {
+					userId: parseInt(userId),
+					fine: { gt: 0 },
+				},
+				include: {
+					book: true,
+				},
+			});
+
+			if (fineTransactions.length === 0) {
+				return new Response(JSON.stringify({ error: "No outstanding fines found" }), {
+					status: 400,
+				});
+			}
+
+			// Calculate total fines
+			const totalFines = fineTransactions.reduce((sum, t) => sum + t.fine, 0);
+
+			// Create fine payment records for each transaction
+			const finePayments = await Promise.all(
+				fineTransactions.map((tx) =>
+					prisma.finePayment.create({
+						data: {
+							transactionId: tx.id,
+							userId: parseInt(userId),
+							amount: tx.fine,
+							processedBy: "Admin", // TODO: Add actual admin user info from session
+							notes: `Bulk fine cleared for ${tx.book.title}`,
+						},
+					})
+				)
+			);
+
+			// Clear all fines
+			await prisma.transaction.updateMany({
+				where: {
+					userId: parseInt(userId),
+					fine: { gt: 0 },
+				},
+				data: { fine: 0 },
+			});
+
+			// Send email notification
+			try {
+				await sendFineClearedEmail({
+					to: user.email,
+					userName: user.name || user.email,
+					totalAmount: totalFines,
+					transactionCount: fineTransactions.length,
+				});
+			} catch (error) {
+				console.error("Failed to send fine cleared email:", error);
+				// Don't fail the operation if email fails
+			}
+
+			return new Response(
+				JSON.stringify({
+					success: true,
+					message: "All fines cleared successfully",
+					totalCleared: totalFines,
+					transactionsUpdated: fineTransactions.length,
+				})
+			);
+		}
+
+		// Find the transaction to get the bookId (for other actions)
 		const transactionRecord = await prisma.transaction.findUnique({
 			where: { id },
 		});
@@ -98,6 +185,23 @@ export async function PATCH(req) {
 			// Store the fine amount before clearing it
 			const clearedFineAmount = transactionRecord.fine;
 
+			if (clearedFineAmount <= 0) {
+				return new Response(JSON.stringify({ error: "No fine to clear" }), {
+					status: 400,
+				});
+			}
+
+			// Create a fine payment record
+			const finePayment = await prisma.finePayment.create({
+				data: {
+					transactionId: id,
+					userId: transactionRecord.userId,
+					amount: clearedFineAmount,
+					processedBy: "Admin", // TODO: Add actual admin user info from session
+					notes: `Fine cleared for ${book.title}`,
+				},
+			});
+
 			// Set fine to 0 for this transaction
 			const transaction = await prisma.transaction.update({
 				where: { id },
@@ -105,24 +209,28 @@ export async function PATCH(req) {
 			});
 
 			// Send fine cleared confirmation email
-			if (clearedFineAmount > 0) {
-				try {
-					await sendFineClearedEmail({
-						to: user.email,
-						userName: user.name || user.email,
-						bookTitle: book.title,
-						bookAuthor: book.author,
-						fineAmount: clearedFineAmount,
-						transactionId: transaction.id,
-					});
-					console.log(`Fine cleared email sent to ${user.email} for transaction ${transaction.id}`);
-				} catch (emailErr) {
-					console.error("Failed to send fine cleared email:", emailErr);
-					// Don't fail the request if email fails
-				}
+			try {
+				await sendFineClearedEmail({
+					to: user.email,
+					userName: user.name || user.email,
+					bookTitle: book.title,
+					bookAuthor: book.author,
+					fineAmount: clearedFineAmount,
+					transactionId: transaction.id,
+				});
+				console.log(`Fine cleared email sent to ${user.email} for transaction ${transaction.id}`);
+			} catch (emailErr) {
+				console.error("Failed to send fine cleared email:", emailErr);
+				// Don't fail the request if email fails
 			}
 
-			return new Response(JSON.stringify(transaction));
+			return new Response(
+				JSON.stringify({
+					transaction,
+					finePayment,
+					message: "Fine cleared and payment recorded",
+				})
+			);
 		}
 
 		if (action === "return") {

@@ -19,8 +19,9 @@ model User {
   role                     Role          @default(STUDENT)
   verifiedUser             String        @default("No")
   verificationToken        String?
-  verificationTokenExpires DateTime?
+  verificationTokenExpires DateTime?     @db.Timestamp(6)
   transactions             Transaction[]
+  finePayments             FinePayment[]
 }
 
 model Book {
@@ -35,18 +36,31 @@ model Book {
 }
 
 model Transaction {
-  id          Int       @id @default(autoincrement())
+  id          Int           @id @default(autoincrement())
   userId      Int
   bookId      Int
-  returned    Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  deadline    DateTime?
-  fine        Int       @default(0)
-  returnedAt  DateTime?
+  returned    Boolean       @default(false)
+  createdAt   DateTime      @default(now()) @db.Timestamp(6)
+  deadline    DateTime?     @db.Timestamp(6)
+  fine        Int           @default(0)
   condition   String?
   returnNotes String?
-  book        Book      @relation(fields: [bookId], references: [id])
-  user        User      @relation(fields: [userId], references: [id])
+  returnedAt  DateTime?     @db.Timestamp(6)
+  book        Book          @relation(fields: [bookId], references: [id])
+  user        User          @relation(fields: [userId], references: [id])
+  finePayments FinePayment[]
+}
+
+model FinePayment {
+  id            Int         @id @default(autoincrement())
+  transactionId Int
+  userId        Int
+  amount        Int         // Amount paid in øre (1 NOK = 100 øre)
+  paidAt        DateTime    @default(now()) @db.Timestamp(6)
+  processedBy   String?     // Admin who processed the payment
+  notes         String?     // Optional payment notes
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
 }
 
 enum Role {
