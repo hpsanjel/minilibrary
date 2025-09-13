@@ -220,6 +220,19 @@ export default function ReportsPage() {
 				</select>
 			</div>
 
+			{/* Actions */}
+			<div className="flex justify-end mb-4 space-x-3">
+				<button onClick={() => handleDownload("csv")} className="flex items-center px-4 py-2 border rounded-lg hover:bg-gray-100">
+					<FileDown className="w-4 h-4 mr-2" /> Export CSV
+				</button>
+				<button onClick={() => handleDownload("pdf")} className="flex items-center px-4 py-2 border rounded-lg hover:bg-gray-100">
+					<FileDown className="w-4 h-4 mr-2" /> Export PDF
+				</button>
+				<button onClick={handlePrint} className="flex items-center px-4 py-2 border rounded-lg hover:bg-gray-100">
+					<Printer className="w-4 h-4 mr-2" /> Print
+				</button>
+			</div>
+
 			{/* Table */}
 			<div className="overflow-x-auto border rounded-lg">
 				{loading ? (
@@ -309,19 +322,6 @@ export default function ReportsPage() {
 						</tbody>
 					</table>
 				)}
-			</div>
-
-			{/* Actions */}
-			<div className="flex justify-end mt-4 space-x-3">
-				<button onClick={() => handleDownload("csv")} className="flex items-center px-4 py-2 border rounded-lg hover:bg-gray-100">
-					<FileDown className="w-4 h-4 mr-2" /> Export CSV
-				</button>
-				<button onClick={() => handleDownload("pdf")} className="flex items-center px-4 py-2 border rounded-lg hover:bg-gray-100">
-					<FileDown className="w-4 h-4 mr-2" /> Export PDF
-				</button>
-				<button onClick={handlePrint} className="flex items-center px-4 py-2 border rounded-lg hover:bg-gray-100">
-					<Printer className="w-4 h-4 mr-2" /> Print
-				</button>
 			</div>
 		</div>
 	);
