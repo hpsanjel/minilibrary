@@ -17,6 +17,7 @@ model User {
   city                     String?
   postalCode               String?
   address                  String?
+  photo                    String?       // Base64 encoded photo
   role                     Role          @default(STUDENT)
   verifiedUser             String        @default("No")
   verificationToken        String?

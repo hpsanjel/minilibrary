@@ -1,6 +1,7 @@
 "use client";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import UserDeletionModal from "@/components/UserDeletionModal";
+import PhotoUpload from "@/components/PhotoUpload";
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft, User, Mail, Phone, MapPin, CreditCard, BookOpen, Clock, DollarSign, CheckCircle, XCircle, Edit, Trash2, Calendar, AlertTriangle, Key } from "lucide-react";
@@ -12,7 +13,7 @@ export default function AdminUsersPage() {
 	const [loading, setLoading] = useState(true);
 	const [showModal, setShowModal] = useState(false);
 	const [modalMode, setModalMode] = useState("edit"); // "edit" or "add"
-	const [form, setForm] = useState({ id: null, name: "", email: "", password: "", phone: "", city: "", postalCode: "", address: "", role: "STUDENT" });
+	const [form, setForm] = useState({ id: null, name: "", email: "", password: "", phone: "", city: "", postalCode: "", address: "", photo: "", role: "STUDENT" });
 	const [verifyingUsers, setVerifyingUsers] = useState(new Set()); // Track users being verified
 	const [resettingPasswords, setResettingPasswords] = useState(new Set()); // Track users having password reset
 
@@ -103,7 +104,7 @@ export default function AdminUsersPage() {
 	};
 
 	const openAddModal = () => {
-		setForm({ id: null, name: "", email: "", password: "", phone: "", city: "", postalCode: "", address: "", role: "STUDENT" });
+		setForm({ id: null, name: "", email: "", password: "", phone: "", city: "", postalCode: "", address: "", photo: "", role: "STUDENT" });
 		setModalMode("add");
 		setShowModal(true);
 	};
@@ -124,6 +125,7 @@ export default function AdminUsersPage() {
 					city: form.city,
 					postalCode: form.postalCode,
 					address: form.address,
+					photo: form.photo,
 					role: form.role,
 				}),
 			});
@@ -147,6 +149,7 @@ export default function AdminUsersPage() {
 					city: form.city,
 					postalCode: form.postalCode,
 					address: form.address,
+					photo: form.photo,
 					role: form.role,
 					verifiedUser: form.verifiedUser,
 				}),
@@ -262,6 +265,7 @@ export default function AdminUsersPage() {
 							<thead className="bg-gray-50">
 								<tr>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membership #</th>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo</th>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
@@ -276,13 +280,13 @@ export default function AdminUsersPage() {
 							<tbody className="bg-white divide-y divide-gray-200">
 								{loading ? (
 									<tr>
-										<td colSpan={7} className="text-center py-8 text-gray-400">
+										<td colSpan={8} className="text-center py-8 text-gray-400">
 											Loading...
 										</td>
 									</tr>
 								) : users.length === 0 ? (
 									<tr>
-										<td colSpan={7} className="text-center py-8 text-gray-400">
+										<td colSpan={8} className="text-center py-8 text-gray-400">
 											No users found.
 										</td>
 									</tr>
@@ -290,6 +294,17 @@ export default function AdminUsersPage() {
 									users.map((user) => (
 										<tr key={user.id} className="hover:bg-gray-50">
 											<td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-blue-600 font-semibold">{user.membershipNumber || "-"}</td>
+											<td className="px-6 py-4 whitespace-nowrap">
+												<div className="w-10 h-10 rounded-full overflow-hidden">
+													{user.photo ? (
+														<img src={user.photo} alt={`${user.name}'s profile`} className="w-full h-full object-cover" />
+													) : (
+														<div className="w-full h-full bg-gray-200 flex items-center justify-center">
+															<User className="w-5 h-5 text-gray-500" />
+														</div>
+													)}
+												</div>
+											</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">{user.name || "-"}</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm">{user.email}</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm">{user.phone || "-"}</td>
@@ -363,6 +378,7 @@ export default function AdminUsersPage() {
 							<input type="text" placeholder="City" value={form.city || ""} onChange={(e) => setForm({ ...form, city: e.target.value })} className="border p-2 rounded" />
 							<input type="text" placeholder="Postal Code" value={form.postalCode || ""} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} className="border p-2 rounded" />
 							<input type="text" placeholder="Address" value={form.address || ""} onChange={(e) => setForm({ ...form, address: e.target.value })} className="border p-2 rounded" />
+							<PhotoUpload photo={form.photo || ""} setPhoto={(photo) => setForm({ ...form, photo })} />
 							<label className="flex items-center gap-2">
 								<span>Role:</span>
 								<select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="border p-2 rounded">
@@ -442,8 +458,14 @@ function UserDetailView({ user, transactions, loading, onBack, onEdit, onDelete,
 			{/* User Info Card */}
 			<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
 				<div className="flex items-start gap-6">
-					<div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-						<User className="w-10 h-10 text-blue-600" />
+					<div className="w-20 h-20 rounded-full flex-shrink-0 overflow-hidden">
+						{user.photo ? (
+							<img src={user.photo} alt={`${user.name}'s profile`} className="w-full h-full object-cover" />
+						) : (
+							<div className="w-full h-full bg-blue-100 flex items-center justify-center">
+								<User className="w-10 h-10 text-blue-600" />
+							</div>
+						)}
 					</div>
 					<div className="flex-1">
 						<div className="flex items-center gap-4 mb-4">

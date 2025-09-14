@@ -21,6 +21,7 @@ export async function GET(request) {
 				city: true,
 				postalCode: true,
 				address: true,
+				photo: true,
 				role: true,
 				verifiedUser: true,
 				transactions: {
@@ -46,6 +47,7 @@ export async function GET(request) {
 				city: true,
 				postalCode: true,
 				address: true,
+				photo: true,
 				role: true,
 				verifiedUser: true,
 			},
@@ -57,7 +59,7 @@ export async function GET(request) {
 // Create a new user
 export async function POST(req) {
 	try {
-		const { name, email, password, phone, city, postalCode, address, role } = await req.json();
+		const { name, email, password, phone, city, postalCode, address, photo, role } = await req.json();
 
 		// Check if user already exists
 		const existingUser = await prisma.user.findUnique({
@@ -86,6 +88,7 @@ export async function POST(req) {
 				city,
 				postalCode,
 				address,
+				photo,
 				role: role || "STUDENT",
 				verifiedUser: "Yes", // Admin-created users are automatically verified
 			},
@@ -104,8 +107,9 @@ export async function POST(req) {
 
 // Update user (name, contact, role)
 export async function PATCH(req) {
-	const { id, name, phone, city, postalCode, address, role, verifiedUser, resetPassword } = await req.json();
+	const { id, name, phone, city, postalCode, address, photo, role, verifiedUser, resetPassword } = await req.json();
 	const data = { name, phone, city, postalCode, address, role };
+	if (photo !== undefined) data.photo = photo;
 	if (verifiedUser !== undefined) data.verifiedUser = verifiedUser;
 
 	// Handle password reset

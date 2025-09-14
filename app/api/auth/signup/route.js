@@ -7,7 +7,7 @@ import { generateMembershipNumber } from "@/lib/membershipUtils";
 
 export async function POST(req) {
 	try {
-		const { name, email, password, phone, city, postalCode, address } = await req.json();
+		const { name, email, password, phone, city, postalCode, address, photo } = await req.json();
 		if (!name || !email || !password) {
 			return new Response(JSON.stringify({ error: "Name, email, and password are required" }), { status: 400 });
 		}
@@ -33,6 +33,7 @@ export async function POST(req) {
 				city,
 				postalCode,
 				address,
+				photo,
 				verifiedUser: "No",
 				verificationToken: token,
 				verificationTokenExpires: tokenExpires,

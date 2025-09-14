@@ -18,6 +18,7 @@ export const authOptions = {
 							name: user.name,
 							role: user.role,
 							membershipNumber: user.membershipNumber,
+							photo: user.photo,
 						};
 					} else {
 						// Not verified - throw specific error
@@ -37,17 +38,42 @@ export const authOptions = {
 	},
 	callbacks: {
 		async jwt({ token, user }) {
+			// If this is a new sign-in
 			if (user) {
 				token.id = user.id;
 				token.role = user.role;
 				token.membershipNumber = user.membershipNumber;
+				token.photo = user.photo;
 			}
+
+			// Refresh user data every hour or if no photo in token
+			const shouldRefresh = !token.photo || Date.now() - (token.lastUpdate || 0) > 60 * 60 * 1000;
+
+			if (shouldRefresh && token.id) {
+				try {
+					const freshUser = await prisma.user.findUnique({
+						where: { id: parseInt(token.id) },
+						select: { photo: true, role: true, membershipNumber: true, name: true, email: true },
+					});
+
+					if (freshUser) {
+						token.photo = freshUser.photo;
+						token.role = freshUser.role;
+						token.membershipNumber = freshUser.membershipNumber;
+						token.lastUpdate = Date.now();
+					}
+				} catch (error) {
+					console.error("Error refreshing user data in JWT callback:", error);
+				}
+			}
+
 			return token;
 		},
 		async session({ session, token }) {
 			if (token?.id) session.user.id = token.id;
 			if (token?.role) session.user.role = token.role;
 			if (token?.membershipNumber) session.user.membershipNumber = token.membershipNumber;
+			if (token?.photo) session.user.photo = token.photo;
 			return session;
 		},
 	},
