@@ -1,9 +1,11 @@
 "use client";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 
 const TABS = [
 	{ key: "overview", label: "Overview" },
+	{ key: "membership", label: "Membership Card" },
 	{ key: "borrowed", label: "Borrowed" },
 	{ key: "returned", label: "Returned" },
 	{ key: "fines", label: "Fine History" },
@@ -14,6 +16,7 @@ export default function BooksUserTabs() {
 	const [activeTab, setActiveTab] = useState("overview");
 	const [transactions, setTransactions] = useState([]);
 	const [loading, setLoading] = useState(false);
+	const [qrCodeUrl, setQrCodeUrl] = useState("");
 
 	useEffect(() => {
 		if (!session) return;
@@ -25,6 +28,22 @@ export default function BooksUserTabs() {
 				setLoading(false);
 			});
 	}, [session]);
+
+	// Generate QR code for membership number
+	useEffect(() => {
+		if (!session?.user?.membershipNumber) return;
+
+		QRCode.toDataURL(session.user.membershipNumber, {
+			width: 200,
+			margin: 2,
+			color: {
+				dark: "#000000",
+				light: "#FFFFFF",
+			},
+		})
+			.then((url) => setQrCodeUrl(url))
+			.catch((err) => console.error("QR Code generation error:", err));
+	}, [session?.user?.membershipNumber]);
 
 	if (!session) return null;
 
@@ -55,6 +74,52 @@ export default function BooksUserTabs() {
 			</div>
 		);
 	};
+
+	const renderMembershipCard = () => (
+		<div className="p-4">
+			{/* <h2 className="text-lg font-bold mb-4">Library Membership Card</h2> */}
+			<div className="max-w-md mx-auto bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl shadow-lg overflow-hidden">
+				{/* Card Header */}
+				<div className="bg-blue-700 px-6 py-4 text-center">
+					<h3 className="text-white text-lg font-bold">Mini Library</h3>
+					<p className="text-blue-200 text-sm">Membership Card</p>
+				</div>
+
+				{/* Card Body */}
+				<div className="bg-white p-6">
+					{/* User Info */}
+					<div className="text-center mb-4">
+						{/* <p className="text-gray-600 text-sm mb-2">{session?.user?.email}</p> */}
+						<div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-4">
+							<h4 className="text-lg font-bold text-gray-800 mb-1">{session?.user?.name || "Library Member"}</h4>
+							{/* <p className="text-xs text-gray-500 mb-1">Membership Number</p> */}
+							<p className="text-blue-700 font-mono font-bold text-lg">{session?.user?.membershipNumber || "Loading..."}</p>
+							{/* QR Code */}
+							<div className="text-center">
+								{qrCodeUrl ? (
+									<div className="bg-gray-50 rounded-lg p-4">
+										<img src={qrCodeUrl} alt="Membership QR Code" className="mx-auto mb-2" style={{ maxWidth: "150px", height: "auto" }} />
+										<p className="text-xs text-gray-500">Scan for quick identification</p>
+									</div>
+								) : (
+									<div className="bg-gray-50 rounded-lg p-4">
+										<div className="w-32 h-32 mx-auto bg-gray-200 rounded flex items-center justify-center">
+											<p className="text-gray-500 text-sm">Loading QR Code...</p>
+										</div>
+									</div>
+								)}
+							</div>
+						</div>
+					</div>
+				</div>
+
+				{/* Card Footer */}
+				<div className="bg-blue-700 px-6 py-3 text-center">
+					<p className="text-blue-200 text-xs">Present this card for library services</p>
+				</div>
+			</div>
+		</div>
+	);
 
 	const renderBorrowed = () => (
 		<div className="overflow-x-auto">
@@ -173,6 +238,7 @@ export default function BooksUserTabs() {
 			</div>
 			<div className="bg-white rounded-lg shadow p-4">
 				{activeTab === "overview" && renderOverview()}
+				{activeTab === "membership" && renderMembershipCard()}
 				{activeTab === "borrowed" && renderBorrowed()}
 				{activeTab === "returned" && renderReturned()}
 				{activeTab === "fines" && renderFines()}

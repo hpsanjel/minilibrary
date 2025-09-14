@@ -12,7 +12,13 @@ export const authOptions = {
 				const user = await prisma.user.findUnique({ where: { email: credentials.email } });
 				if (user && (await bcrypt.compare(credentials.password, user.password))) {
 					if (user.verifiedUser === "Yes") {
-						return { id: user.id, email: user.email, name: user.name, role: user.role };
+						return {
+							id: user.id,
+							email: user.email,
+							name: user.name,
+							role: user.role,
+							membershipNumber: user.membershipNumber,
+						};
 					} else {
 						// Not verified - throw specific error
 						throw new Error("EMAIL_NOT_VERIFIED");
@@ -34,12 +40,14 @@ export const authOptions = {
 			if (user) {
 				token.id = user.id;
 				token.role = user.role;
+				token.membershipNumber = user.membershipNumber;
 			}
 			return token;
 		},
 		async session({ session, token }) {
 			if (token?.id) session.user.id = token.id;
 			if (token?.role) session.user.role = token.role;
+			if (token?.membershipNumber) session.user.membershipNumber = token.membershipNumber;
 			return session;
 		},
 	},
