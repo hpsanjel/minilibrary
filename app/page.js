@@ -13,6 +13,8 @@ export default function Home() {
 	useEffect(() => {
 		if (user?.role === "ADMIN") {
 			router.replace("/admin/dashboard");
+		} else if (user?.role === "STUDENT") {
+			router.replace("/books");
 		}
 	}, [user, router]);
 

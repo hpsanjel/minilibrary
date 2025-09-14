@@ -104,9 +104,16 @@ export async function POST(req) {
 
 // Update user (name, contact, role)
 export async function PATCH(req) {
-	const { id, name, phone, city, postalCode, address, role, verifiedUser } = await req.json();
+	const { id, name, phone, city, postalCode, address, role, verifiedUser, resetPassword } = await req.json();
 	const data = { name, phone, city, postalCode, address, role };
 	if (verifiedUser !== undefined) data.verifiedUser = verifiedUser;
+
+	// Handle password reset
+	if (resetPassword === true) {
+		const defaultPassword = "password";
+		const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+		data.password = hashedPassword;
+	}
 
 	// Get user info before update to check if verification status changed
 	const existingUser = await prisma.user.findUnique({

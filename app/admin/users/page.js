@@ -3,7 +3,7 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import UserDeletionModal from "@/components/UserDeletionModal";
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, User, Mail, Phone, MapPin, CreditCard, BookOpen, Clock, DollarSign, CheckCircle, XCircle, Edit, Trash2, Calendar, AlertTriangle } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, MapPin, CreditCard, BookOpen, Clock, DollarSign, CheckCircle, XCircle, Edit, Trash2, Calendar, AlertTriangle, Key } from "lucide-react";
 
 export default function AdminUsersPage() {
 	const [users, setUsers] = useState([]);
@@ -14,6 +14,7 @@ export default function AdminUsersPage() {
 	const [modalMode, setModalMode] = useState("edit"); // "edit" or "add"
 	const [form, setForm] = useState({ id: null, name: "", email: "", password: "", phone: "", city: "", postalCode: "", address: "", role: "STUDENT" });
 	const [verifyingUsers, setVerifyingUsers] = useState(new Set()); // Track users being verified
+	const [resettingPasswords, setResettingPasswords] = useState(new Set()); // Track users having password reset
 
 	const searchParams = useSearchParams();
 	const router = useRouter();
@@ -200,11 +201,50 @@ export default function AdminUsersPage() {
 		}
 	};
 
+	// Add password reset handler
+	const handleResetPassword = async (id) => {
+		if (!confirm("Are you sure you want to reset this user's password to 'password'?")) return;
+
+		// Add user ID to resetting set
+		setResettingPasswords((prev) => new Set([...prev, id]));
+
+		try {
+			const response = await fetch("/api/users", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ id, resetPassword: true }),
+			});
+
+			if (response.ok) {
+				alert("Password reset successfully! New password is 'password'");
+				// If we're on a detail page, refresh the detail view
+				if (userId) {
+					fetchUserDetails(userId);
+				} else {
+					fetchUsers();
+				}
+			} else {
+				const error = await response.json();
+				alert(error.error || "Failed to reset password");
+			}
+		} catch (error) {
+			console.error("Failed to reset password:", error);
+			alert("Failed to reset password");
+		} finally {
+			// Remove user ID from resetting set
+			setResettingPasswords((prev) => {
+				const newSet = new Set(prev);
+				newSet.delete(id);
+				return newSet;
+			});
+		}
+	};
+
 	return (
 		<div className="p-6">
 			{userId && selectedUser ? (
 				// Detailed User View
-				<UserDetailView user={selectedUser} transactions={userTransactions} loading={loading} onBack={() => router.push("/admin/users")} onEdit={() => openEditModal(selectedUser)} onDelete={() => openDeleteModal(selectedUser)} />
+				<UserDetailView user={selectedUser} transactions={userTransactions} loading={loading} onBack={() => router.push("/admin/users")} onEdit={() => openEditModal(selectedUser)} onDelete={() => openDeleteModal(selectedUser)} onResetPassword={() => handleResetPassword(selectedUser.id)} isResettingPassword={resettingPasswords.has(selectedUser.id)} />
 			) : (
 				// Users List View
 				<>
@@ -265,6 +305,19 @@ export default function AdminUsersPage() {
 											<td className="px-6 py-4 whitespace-nowrap text-center text-sm flex gap-2">
 												<button onClick={() => openEditModal(user)} className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded shadow text-xs">
 													Edit
+												</button>
+												<button onClick={() => handleResetPassword(user.id)} disabled={resettingPasswords.has(user.id)} className={`px-3 py-1 rounded shadow text-xs flex items-center gap-1 ${resettingPasswords.has(user.id) ? "bg-gray-400 text-white cursor-not-allowed" : "bg-orange-500 hover:bg-orange-600 text-white"}`}>
+													{resettingPasswords.has(user.id) ? (
+														<>
+															<svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+																<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+																<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+															</svg>
+															Resetting...
+														</>
+													) : (
+														"Reset Pwd"
+													)}
 												</button>
 												<button onClick={() => openDeleteModal(user)} className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded shadow text-xs">
 													Delete
@@ -346,7 +399,7 @@ export default function AdminUsersPage() {
 }
 
 // User Detail View Component
-function UserDetailView({ user, transactions, loading, onBack, onEdit, onDelete }) {
+function UserDetailView({ user, transactions, loading, onBack, onEdit, onDelete, onResetPassword, isResettingPassword }) {
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center h-64">
@@ -374,6 +427,10 @@ function UserDetailView({ user, transactions, loading, onBack, onEdit, onDelete 
 					<button onClick={onEdit} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
 						<Edit className="w-4 h-4" />
 						Edit User
+					</button>
+					<button onClick={onResetPassword} disabled={isResettingPassword} className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+						{isResettingPassword ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : <Key className="w-4 h-4" />}
+						{isResettingPassword ? "Resetting..." : "Reset Password"}
 					</button>
 					<button onClick={onDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2">
 						<Trash2 className="w-4 h-4" />

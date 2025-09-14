@@ -1,11 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function AuthForm() {
 	const { data: session, status } = useSession();
 	const router = useRouter();
+	const searchParams = useSearchParams();
+	const callbackUrl = searchParams.get("callbackUrl");
 	const [isSignUp, setIsSignUp] = useState(false);
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -23,13 +25,18 @@ export default function AuthForm() {
 	// Redirect if already authenticated (in useEffect to avoid setState in render)
 	useEffect(() => {
 		if (status === "authenticated") {
-			if (session?.user?.role === "ADMIN") {
+			if (callbackUrl) {
+				// Redirect to the original page user was trying to access
+				router.replace(callbackUrl);
+			} else if (session?.user?.role === "ADMIN") {
 				router.replace("/admin/dashboard");
+			} else if (session?.user?.role === "STUDENT") {
+				router.replace("/books");
 			} else {
 				router.replace("/");
 			}
 		}
-	}, [status, session, router]);
+	}, [status, session, router, callbackUrl]);
 	if (status === "authenticated") return null;
 
 	const handleResendVerification = async () => {
@@ -108,8 +115,15 @@ export default function AuthForm() {
 					setShowResendVerification(false);
 				}
 			} else {
-				// Use router to redirect after successful login
-				router.replace("/admin/dashboard");
+				// Sign-in successful, redirect appropriately
+				if (callbackUrl) {
+					// Redirect to the original page user was trying to access
+					router.replace(callbackUrl);
+				} else {
+					// Default redirect - will be handled by the useEffect above when session updates
+					// This is a fallback, the main redirect logic is in useEffect
+					router.replace("/books");
+				}
 			}
 		}
 	};
@@ -117,6 +131,15 @@ export default function AuthForm() {
 	return (
 		<form onSubmit={handleSubmit} className="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow space-y-6" autoComplete="off">
 			<h1 className="text-2xl font-bold text-center text-gray-900">{isSignUp ? "Sign Up" : "Sign In"}</h1>
+
+			{callbackUrl && callbackUrl.includes("/books/borrow/") && !isSignUp && (
+				<div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+					<p className="text-blue-800 text-sm">
+						📚 <strong>Almost there!</strong> Sign in to continue borrowing your selected book.
+					</p>
+				</div>
+			)}
+
 			{error && (
 				<div className="text-red-600 text-center">
 					<p>{error}</p>
