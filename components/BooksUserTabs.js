@@ -5,12 +5,12 @@ import Image from "next/image";
 import QRCode from "qrcode";
 
 const TABS = [
-	{ key: "overview", label: "Overview" },
-	{ key: "membership", label: "Membership Card" },
-	{ key: "borrowed", label: "Borrowed" },
-	{ key: "returned", label: "Returned" },
-	{ key: "fines", label: "Fine History" },
-	{ key: "password", label: "Change Password" },
+	{ key: "overview", label: "Overview", shortLabel: "Overview" },
+	{ key: "membership", label: "Membership Card", shortLabel: "Card" },
+	{ key: "borrowed", label: "Borrowed", shortLabel: "Borrowed" },
+	{ key: "returned", label: "Returned", shortLabel: "Returned" },
+	{ key: "fines", label: "Fine History", shortLabel: "Fines" },
+	{ key: "password", label: "Change Password", shortLabel: "Password" },
 ];
 
 export default function BooksUserTabs() {
@@ -328,12 +328,31 @@ export default function BooksUserTabs() {
 
 	return (
 		<div className="mb-8">
-			<div className="flex gap-2 mb-4 border-b pb-2">
-				{TABS.map((tab) => (
-					<button key={tab.key} className={`px-4 py-2 rounded-t-lg font-semibold focus:outline-none transition border-b-2 ${activeTab === tab.key ? "border-blue-600 text-blue-700 bg-blue-50" : "border-transparent text-gray-600 bg-gray-100 hover:bg-gray-200"}`} onClick={() => setActiveTab(tab.key)}>
-						{tab.label}
-					</button>
-				))}
+			{/* Mobile-friendly horizontal scrollable tabs */}
+			<div className="relative">
+				<div className="flex gap-1 mb-4 border-b pb-2 overflow-x-auto scrollbar-hide">
+					<div className="flex gap-1 min-w-max px-1">
+						{TABS.map((tab) => (
+							<button
+								key={tab.key}
+								className={`
+									px-3 py-2 rounded-t-lg font-medium focus:outline-none transition border-b-2 whitespace-nowrap text-sm min-w-0 flex-shrink-0
+									${activeTab === tab.key ? "border-blue-600 text-blue-700 bg-blue-50" : "border-transparent text-gray-600 bg-gray-100 hover:bg-gray-200 active:bg-gray-300"}
+									sm:px-4 sm:py-3 sm:text-base sm:min-w-0
+									touch-manipulation select-none
+								`}
+								onClick={() => setActiveTab(tab.key)}
+							>
+								{/* Show short label on mobile, full label on larger screens */}
+								<span className="block sm:hidden">{tab.shortLabel}</span>
+								<span className="hidden sm:block">{tab.label}</span>
+							</button>
+						))}
+					</div>
+				</div>
+				{/* Scroll indicator shadows */}
+				<div className="absolute left-0 top-0 bottom-4 w-4 bg-gradient-to-r from-white to-transparent pointer-events-none sm:hidden z-10"></div>
+				<div className="absolute right-0 top-0 bottom-4 w-4 bg-gradient-to-l from-white to-transparent pointer-events-none sm:hidden z-10"></div>
 			</div>
 			<div className="bg-white rounded-lg shadow p-4">
 				{activeTab === "overview" && renderOverview()}
