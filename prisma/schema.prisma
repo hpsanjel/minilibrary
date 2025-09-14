@@ -21,6 +21,8 @@ model User {
   verifiedUser             String        @default("No")
   verificationToken        String?
   verificationTokenExpires DateTime?     @db.Timestamp(6)
+  passwordResetToken       String?
+  passwordResetTokenExpires DateTime?    @db.Timestamp(6)
   transactions             Transaction[]
   finePayments             FinePayment[]
 }

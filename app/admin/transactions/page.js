@@ -641,7 +641,7 @@ export default function AdminTransactionsPage() {
 								</div>
 								<div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
 									<p className="text-green-800 text-sm">
-										<strong>Action:</strong> Click "Clear Fine and Mark Returned" to automatically clear the outstanding fine and mark this book as returned.
+										<strong>Action:</strong> Click &quot;Clear Fine and Mark Returned&quot; to automatically clear the outstanding fine and mark this book as returned.
 									</p>
 								</div>
 							</div>
