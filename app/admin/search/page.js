@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import { BookOpen, User, Phone, Mail, CreditCard, Clock, DollarSign, CheckCircle, XCircle, ArrowLeft, Search, Users, Library } from "lucide-react";
 
 export default function SearchResultsPage() {
@@ -73,7 +74,7 @@ export default function SearchResultsPage() {
 							<div>
 								<h1 className="text-2xl font-bold text-gray-900">Search Results</h1>
 								<p className="text-gray-600 mt-1">
-									{totalResults} results for "{query}"
+									{totalResults} results for &ldquo;{query}&rdquo;
 								</p>
 							</div>
 						</div>
@@ -251,7 +252,7 @@ function BookCard({ book }) {
 			<div className="p-6">
 				{/* Book Header */}
 				<div className="flex flex-col sm:flex-row gap-4 mb-4">
-					<div className="w-16 h-20 bg-gray-200 rounded flex-shrink-0 flex items-center justify-center">{book.coverUrl ? <img src={book.coverUrl} alt={book.title} className="w-full h-full object-cover rounded" /> : <BookOpen className="w-8 h-8 text-gray-400" />}</div>
+					<div className="w-16 h-20 bg-gray-200 rounded flex-shrink-0 flex items-center justify-center">{book.coverUrl ? <Image src={book.coverUrl} alt={book.title} width={64} height={80} className="w-full h-full object-cover rounded" /> : <BookOpen className="w-8 h-8 text-gray-400" />}</div>
 
 					<div className="flex-1 min-w-0">
 						<h3 className="text-lg font-semibold text-gray-900 mb-1">{book.title}</h3>

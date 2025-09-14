@@ -248,7 +248,7 @@ export default function AdminIssuePage() {
 								<p>🎯 Point camera at QR code on membership card</p>
 								<p>💡 Make sure QR code is clearly visible and well-lit</p>
 								<p className="text-blue-600 mt-2">
-									<strong>Tip:</strong> If camera doesn't work, you can manually type the membership number above
+									<strong>Tip:</strong> If camera doesn&apos;t work, you can manually type the membership number above
 								</p>
 							</div>
 							<div id="user-qr-scanner" className="w-full"></div>
@@ -311,7 +311,7 @@ export default function AdminIssuePage() {
 								<p>📚 Point camera at QR code on book cover or ISBN barcode</p>
 								<p>💡 Make sure code is clearly visible and well-lit</p>
 								<p className="text-blue-600 mt-2">
-									<strong>Tip:</strong> If camera doesn't work, you can manually type the ISBN above
+									<strong>Tip:</strong> If camera doesn&apos;t work, you can manually type the ISBN above
 								</p>
 							</div>
 							<div id="book-qr-scanner" className="w-full"></div>

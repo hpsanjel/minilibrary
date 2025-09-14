@@ -145,7 +145,7 @@ export default function QuickSearchBox({ placeholder = "Quick search...", classN
 					<button onClick={handleSearch} className="w-full px-4 py-4 text-left hover:bg-blue-50 text-blue-600 text-sm font-medium border-t bg-gray-50 transition-colors">
 						<div className="flex items-center gap-2">
 							<Search className="w-4 h-4" />
-							View all results for "{searchQuery}"
+							View all results for &ldquo;{searchQuery}&rdquo;
 						</div>
 					</button>
 				</div>
