@@ -74,16 +74,17 @@ export default function AdminDashboard() {
 						<h1 className="text-3xl font-bold">Admin Dashboard</h1>
 					</div>
 					<div className="flex items-center space-x-4">
-						<QuickSearchBox placeholder="Search users or books..." className="w-full sm:w-80" />
+						<QuickSearchBox placeholder="Search users or books..." className="w-full sm:w-80 md:w-120" />
 					</div>
 				</header>
 
 				{/* Stats Cards */}
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
 					<StatCard title="Books" value={loading ? "-" : stats.books} icon={<BookIcon />} color="from-blue-400 to-blue-600" href="/admin/books" />
 					<StatCard title="Users" value={loading ? "-" : stats.users} icon={<UserIcon />} color="from-green-400 to-green-600" href="/admin/users" />
 					<StatCard title="Transactions" value={loading ? "-" : stats.transactions} icon={<List />} color="from-purple-400 to-purple-600" href="/admin/transactions" />
-					<StatCard title="Borrowed" value={loading ? "-" : stats.borrowed} icon={<HandGrab />} color="from-orange-400 to-orange-600" href="/admin/issues" />
+					<StatCard title="Issue" value={loading ? "-" : "300"} icon={<HandGrab />} color="from-orange-400 to-orange-600" href="/admin/issue" />
+					<StatCard title="Reports" value={loading ? "-" : "7"} icon={<Search />} color="from-teal-400 to-teal-600" href="/admin/dashboard/reports" />
 				</div>
 
 				{/* Charts Section */}
@@ -111,7 +112,7 @@ export default function AdminDashboard() {
 								data={[
 									{ name: "Books", value: stats.books },
 									{ name: "Users", value: stats.users },
-									{ name: "Tx", value: stats.transactions },
+									{ name: "Transactions", value: stats.transactions },
 								]}
 							>
 								<XAxis dataKey="name" />

@@ -15,7 +15,7 @@ export default function BooksExplorer({ books }) {
 		// filter by search
 		if (search.trim()) {
 			const s = search.toLowerCase();
-			list = list.filter((b) => b.title.toLowerCase().includes(s) || b.author.toLowerCase().includes(s));
+			list = list.filter((b) => b.title.toLowerCase().includes(s) || b.author.toLowerCase().includes(s) || (b.isbn && b.isbn.toLowerCase().includes(s)));
 		}
 
 		return list;
@@ -28,7 +28,7 @@ export default function BooksExplorer({ books }) {
 					<input type="checkbox" checked={onlyAvailable} onChange={(e) => setOnlyAvailable(e.target.checked)} className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
 					<span>View Only Available</span>
 				</label>
-				<input type="text" placeholder="Search by title or author..." className="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" value={search} onChange={(e) => setSearch(e.target.value)} />
+				<input type="text" placeholder="Search by title or author or isbn..." className="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" value={search} onChange={(e) => setSearch(e.target.value)} />
 			</div>
 
 			<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
