@@ -21,9 +21,18 @@ export default function AdminTransactionsPage() {
 	const [successButtons, setSuccessButtons] = useState({}); // { transactionId: 'issue'|'return'|'clearFine' }
 
 	const handleClearFine = (tx) => {
+		// Calculate current fine amount
+		const now = new Date();
+		const deadline = new Date(tx.deadline);
+		const isOverdue = now > deadline && !tx.returned;
+		const daysOverdue = Math.floor((now - deadline) / (1000 * 60 * 60 * 24));
+		const currentFine = isOverdue ? Math.max(0, daysOverdue * 5) : 0;
+
 		// Set processing state
 		setProcessingButtons((prev) => ({ ...prev, [tx.id]: "clearFine" }));
-		setPendingClearFineTx(tx);
+
+		// Store transaction with calculated fine for modal display
+		setPendingClearFineTx({ ...tx, currentFine });
 		setShowClearFineModal(true);
 	};
 
@@ -63,6 +72,69 @@ export default function AdminTransactionsPage() {
 			setProcessingButtons((prev) => ({ ...prev, [transactionId]: null }));
 			setShowClearFineModal(false);
 			setPendingClearFineTx(null);
+		}
+	};
+
+	const clearFineAndMarkReturned = async () => {
+		if (!pendingReturnTx) return;
+
+		const transactionId = pendingReturnTx.id;
+
+		try {
+			// Calculate current fine amount for the fine payment record
+			const now = new Date();
+			const deadline = new Date(pendingReturnTx.deadline);
+			const isOverdue = now > deadline;
+			const daysOverdue = Math.floor((now - deadline) / (1000 * 60 * 60 * 24));
+			const currentFine = isOverdue ? Math.max(0, daysOverdue * 5) : 0;
+
+			// First, record the fine payment if there's a fine to clear
+			if (currentFine > 0) {
+				const finePaymentRes = await fetch("/api/fine-payments", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						transactionId: transactionId,
+						userId: pendingReturnTx.userId,
+						amount: currentFine,
+						reason: `Fine cleared for overdue book: ${pendingReturnTx.book.title}`,
+						clearedBy: "admin", // You might want to get actual admin user info
+					}),
+				});
+
+				if (!finePaymentRes.ok) {
+					throw new Error("Failed to record fine payment");
+				}
+			}
+
+			// Then, mark the book as returned and clear the fine
+			const returnRes = await fetch("/api/transactions", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					id: transactionId,
+					action: "return",
+					clearFine: true, // Add flag to clear fine
+					fineAmount: currentFine, // Pass the fine amount for email
+				}),
+			});
+
+			if (returnRes.ok) {
+				// Show success message
+				setSuccessMessage(`Book returned successfully! Fine of ${currentFine} NOK cleared.`);
+				setShowSuccessMessage(true);
+				setTimeout(() => setShowSuccessMessage(false), 5000);
+
+				// Close modal and refresh data
+				setShowFineWarningModal(false);
+				setPendingReturnTx(null);
+				fetchTransactions();
+			} else {
+				throw new Error("Failed to return book");
+			}
+		} catch (error) {
+			console.error("Failed to clear fine and return book:", error);
+			// You might want to show an error message to the user
 		}
 	};
 
@@ -224,6 +296,9 @@ export default function AdminTransactionsPage() {
 									const isOverdue = now > deadline && !tx.returned;
 									const daysOverdue = Math.floor((now - deadline) / (1000 * 60 * 60 * 24));
 
+									// Calculate current fine amount
+									const currentFine = tx.returned ? tx.fine : isOverdue ? Math.max(0, daysOverdue * 5) : 0;
+
 									return (
 										<tr key={tx.id} className={isOverdue ? "bg-red-50" : ""}>
 											<td className="px-6 py-4 whitespace-nowrap">
@@ -243,7 +318,7 @@ export default function AdminTransactionsPage() {
 											{/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{new Date(tx.createdAt).toLocaleDateString()}</td> */}
 											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{new Date(tx.deadline).toLocaleDateString()}</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{tx.returnedAt ? new Date(tx.returnedAt).toLocaleDateString() : "-"}</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{tx.fine ? tx.fine.toFixed(2) : "0.00"}</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{currentFine.toFixed(2)}</td>
 											<td className="px-6 py-4 whitespace-nowrap">
 												{tx.returned ? (
 													<span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Returned</span>
@@ -261,16 +336,8 @@ export default function AdminTransactionsPage() {
 													<div className="flex flex-col gap-2">
 														<button
 															onClick={() => {
-																// Calculate if there are any outstanding fines
-																const now = new Date();
-																const deadline = new Date(tx.deadline);
-																const isCurrentlyOverdue = now > deadline;
-																const daysOverdue = isCurrentlyOverdue ? Math.max(0, Math.ceil((now - deadline) / (1000 * 60 * 60 * 24))) : 0;
-																const additionalFine = daysOverdue * 5;
-																const totalOutstandingFine = tx.fine + additionalFine;
-
-																// Check if there are any outstanding fines (existing or calculated)
-																if (totalOutstandingFine > 0) {
+																// Check if there are any outstanding fines (use consistent calculation)
+																if (currentFine > 0) {
 																	// Show warning modal - cannot return with outstanding fines
 																	setPendingReturnTx(tx);
 																	setShowFineWarningModal(true);
@@ -310,7 +377,7 @@ export default function AdminTransactionsPage() {
 														<button
 															onClick={() => {
 																// Check if there are any outstanding fines before reissuing
-																if (tx.fine > 0) {
+																if (currentFine > 0) {
 																	// Show fine modal for outstanding fines
 																	setPendingIssueTx(tx);
 																	setShowFineModal(true);
@@ -382,28 +449,30 @@ export default function AdminTransactionsPage() {
 														</button>
 													</div>
 												)}
-												{tx.fine > 0 && (
-													<button onClick={() => handleClearFine(tx)} className={`px-4 py-1 rounded text-sm flex items-center gap-1 ${processingButtons[tx.id] === "clearFine" ? "bg-gray-400 text-white cursor-not-allowed" : successButtons[tx.id] === "clearFine" ? "bg-green-500 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}`} disabled={processingButtons[tx.id] === "clearFine"}>
-														{processingButtons[tx.id] === "clearFine" ? (
-															<>
-																<svg className="animate-spin h-3 w-3 mr-1" viewBox="0 0 24 24">
-																	<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-																	<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-																</svg>
-																Processing...
-															</>
-														) : successButtons[tx.id] === "clearFine" ? (
-															<>
-																<svg className="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-																	<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-																</svg>
-																Cleared
-															</>
-														) : (
-															"Clear Fine"
-														)}
-													</button>
-												)}
+												{
+													/* currentFine > 0 && */ false && (
+														<button onClick={() => handleClearFine(tx)} className={`px-4 py-1 rounded text-sm flex items-center gap-1 ${processingButtons[tx.id] === "clearFine" ? "bg-gray-400 text-white cursor-not-allowed" : successButtons[tx.id] === "clearFine" ? "bg-green-500 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}`} disabled={processingButtons[tx.id] === "clearFine"}>
+															{processingButtons[tx.id] === "clearFine" ? (
+																<>
+																	<svg className="animate-spin h-3 w-3 mr-1" viewBox="0 0 24 24">
+																		<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+																		<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+																	</svg>
+																	Processing...
+																</>
+															) : successButtons[tx.id] === "clearFine" ? (
+																<>
+																	<svg className="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+																		<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+																	</svg>
+																	Cleared
+																</>
+															) : (
+																"Clear Fine"
+															)}
+														</button>
+													)
+												}
 											</td>
 										</tr>
 									);
@@ -514,7 +583,7 @@ export default function AdminTransactionsPage() {
 								<strong>Book:</strong> {pendingClearFineTx.book.title}
 							</div>
 							<div>
-								<strong>Fine:</strong> {pendingClearFineTx.fine} NOK
+								<strong>Fine:</strong> {pendingClearFineTx.currentFine || pendingClearFineTx.fine} NOK
 							</div>
 							<div className="mt-2">Are you sure you want to clear this fine?</div>
 						</>
@@ -532,19 +601,15 @@ export default function AdminTransactionsPage() {
 						setShowFineWarningModal(false);
 						setPendingReturnTx(null);
 					}}
-					onConfirm={() => {
-						setShowFineWarningModal(false);
-						setPendingReturnTx(null);
-					}}
-					title="Outstanding Fine - Cannot Return Book"
+					onConfirm={clearFineAndMarkReturned}
+					title="Outstanding Fine - Clear and Return Book"
 					message={(() => {
 						const now = new Date();
 						const deadline = new Date(pendingReturnTx.deadline);
-						const isCurrentlyOverdue = now > deadline;
-						const daysOverdue = isCurrentlyOverdue ? Math.max(0, Math.ceil((now - deadline) / (1000 * 60 * 60 * 24))) : 0;
-						const additionalFine = daysOverdue * 5;
-						const existingFine = pendingReturnTx.fine;
-						const totalFine = existingFine + additionalFine;
+						const isOverdue = now > deadline;
+						const daysOverdue = Math.floor((now - deadline) / (1000 * 60 * 60 * 24));
+						// Use same calculation as table display
+						const currentFine = isOverdue ? Math.max(0, daysOverdue * 5) : 0;
 
 						return (
 							<div>
@@ -553,9 +618,9 @@ export default function AdminTransactionsPage() {
 										<svg className="h-5 w-5 text-amber-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
 											<path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
 										</svg>
-										<span className="font-medium text-amber-800">Fine Must Be Cleared First</span>
+										<span className="font-medium text-amber-800">Outstanding Fine Detected</span>
 									</div>
-									<p className="text-amber-700">This book cannot be marked as returned because there is an outstanding fine that needs to be cleared first.</p>
+									<p className="text-amber-700">This book has an outstanding fine that will be automatically cleared when you mark it as returned.</p>
 								</div>
 								<div className="space-y-2 text-sm">
 									<div>
@@ -567,36 +632,24 @@ export default function AdminTransactionsPage() {
 									<div>
 										<strong>Deadline:</strong> {new Date(pendingReturnTx.deadline).toLocaleDateString()}
 									</div>
-									{existingFine > 0 && (
-										<div className="text-orange-600">
-											<strong>Existing Fine:</strong> {existingFine} NOK
-										</div>
-									)}
-									{isCurrentlyOverdue && (
-										<>
-											<div>
-												<strong>Days Overdue:</strong> {daysOverdue} days
-											</div>
-											<div className="text-orange-600">
-												<strong>Additional Fine:</strong> {additionalFine} NOK
-											</div>
-										</>
-									)}
+									<div>
+										<strong>Days Overdue:</strong> {daysOverdue} days
+									</div>
 									<div className="text-red-600 font-medium border-t pt-2">
-										<strong>Total Fine Due:</strong> {totalFine} NOK
+										<strong>Total Fine Due:</strong> {currentFine} NOK
 									</div>
 								</div>
-								<div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
-									<p className="text-blue-800 text-sm">
-										<strong>Next Steps:</strong> Please collect the fine payment first, then use the &quot;Clear Fine&quot; button to clear the outstanding amount before marking the book as returned.
+								<div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
+									<p className="text-green-800 text-sm">
+										<strong>Action:</strong> Click "Clear Fine and Mark Returned" to automatically clear the outstanding fine and mark this book as returned.
 									</p>
 								</div>
 							</div>
 						);
 					})()}
-					confirmText="Understood"
-					confirmClass="bg-blue-600 text-white hover:bg-blue-700"
-					hideCancel={true}
+					confirmText="Clear Fine and Mark Returned"
+					confirmClass="bg-green-600 text-white hover:bg-green-700"
+					hideCancel={false}
 				/>
 			)}
 		</div>

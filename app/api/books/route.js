@@ -13,6 +13,7 @@ export async function GET() {
 			author: true,
 			isbn: true,
 			copies: true,
+			available: true, // include available field
 			coverUrl: true, // include cover URL
 			transactions: {
 				where: {
@@ -25,7 +26,7 @@ export async function GET() {
 		},
 	});
 
-	// Calculate available copies for each book
+	// Calculate available copies for each book and return complete book data
 	const booksWithAvailable = books.map((book) => {
 		const borrowedCount = book.transactions.length;
 		const availableCopies = book.copies - borrowedCount;
@@ -35,6 +36,8 @@ export async function GET() {
 			title: book.title,
 			author: book.author,
 			isbn: book.isbn,
+			copies: book.copies, // Return the actual copies count
+			available: book.available && availableCopies > 0, // Book is available if flagged as available AND has copies
 			availableCopies: `${availableCopies} of ${book.copies} available`,
 			coverUrl: book.coverUrl,
 		};

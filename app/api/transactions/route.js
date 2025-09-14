@@ -234,11 +234,16 @@ export async function PATCH(req) {
 		}
 
 		if (action === "return") {
-			// Calculate fine if overdue
+			const { clearFine, fineAmount } = requestData;
+
+			// Calculate fine if overdue (unless being cleared)
 			let fine = 0;
+			let originalFineAmount = 0; // Track the original fine for email purposes
+
 			if (transactionRecord.deadline && new Date() > new Date(transactionRecord.deadline)) {
-				const daysLate = Math.ceil((new Date() - new Date(transactionRecord.deadline)) / (1000 * 60 * 60 * 24));
-				fine = daysLate * 5;
+				const daysLate = Math.floor((new Date() - new Date(transactionRecord.deadline)) / (1000 * 60 * 60 * 24));
+				originalFineAmount = daysLate * 5;
+				fine = clearFine ? 0 : originalFineAmount; // Set fine to 0 if clearing, otherwise use calculated amount
 			}
 
 			// Get user and book data for email
@@ -249,7 +254,7 @@ export async function PATCH(req) {
 				where: { id: transactionRecord.bookId },
 			});
 
-			// Mark transaction as returned, set fine, and set returnedAt
+			// Mark transaction as returned, set fine (0 if cleared), and set returnedAt
 			const transaction = await prisma.transaction.update({
 				where: { id },
 				data: { returned: true, fine, returnedAt: new Date() },
@@ -267,30 +272,84 @@ export async function PATCH(req) {
 				});
 			}
 
-			// Send return confirmation email only if requested
-			if (sendEmailConfirmation) {
+			// Create fine payment record if fine was cleared
+			let finePayment = null;
+			if (clearFine && fineAmount > 0) {
 				try {
-					await sendBookReturnedEmail({
+					finePayment = await prisma.finePayment.create({
+						data: {
+							transactionId: id,
+							userId: transactionRecord.userId,
+							amount: fineAmount,
+							processedBy: "Admin", // TODO: Add actual admin user info from session
+							notes: `Fine cleared during return for ${book.title}`,
+						},
+					});
+				} catch (finePaymentErr) {
+					console.error("Failed to record fine payment:", finePaymentErr);
+					// Don't fail the request if fine payment recording fails
+				}
+			}
+
+			// Send appropriate emails
+			try {
+				// Determine what fine amount to show in return email
+				const emailFineAmount = clearFine && fineAmount > 0 ? fineAmount : originalFineAmount;
+
+				console.log("Email debug:", {
+					clearFine,
+					fineAmount,
+					originalFineAmount,
+					emailFineAmount,
+					transactionId: id,
+				});
+
+				// Send return confirmation email
+				await sendBookReturnedEmail({
+					to: user.email,
+					userName: user.name || user.email,
+					bookTitle: book.title,
+					bookAuthor: book.author,
+					returnedAt: transaction.returnedAt.toLocaleString("en-GB", {
+						year: "numeric",
+						month: "short",
+						day: "numeric",
+						hour: "2-digit",
+						minute: "2-digit",
+					}),
+					fine: emailFineAmount,
+					transactionId: transaction.id,
+				});
+
+				// Send fine cleared email if fine was cleared
+				if (clearFine && fineAmount > 0) {
+					await sendFineClearedEmail({
 						to: user.email,
 						userName: user.name || user.email,
 						bookTitle: book.title,
 						bookAuthor: book.author,
-						returnedAt: transaction.returnedAt.toLocaleString("en-GB", {
+						clearedAt: new Date().toLocaleString("en-GB", {
 							year: "numeric",
 							month: "short",
 							day: "numeric",
 							hour: "2-digit",
 							minute: "2-digit",
 						}),
-						fine: fine,
+						fineAmount: fineAmount,
 						transactionId: transaction.id,
 					});
-				} catch (emailErr) {
-					console.error("Failed to send return confirmation email", emailErr);
 				}
+			} catch (emailErr) {
+				console.error("Failed to send confirmation emails", emailErr);
 			}
 
-			return new Response(JSON.stringify(transaction));
+			return new Response(
+				JSON.stringify({
+					transaction,
+					finePayment,
+					message: clearFine && fineAmount > 0 ? "Book returned and fine cleared" : "Book returned successfully",
+				})
+			);
 		}
 
 		if (action === "issue") {

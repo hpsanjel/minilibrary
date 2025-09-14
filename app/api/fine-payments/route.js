@@ -1,5 +1,35 @@
 import prisma from "@/lib/prisma";
 
+export async function POST(req) {
+	try {
+		const body = await req.json();
+		const { transactionId, userId, amount, processedBy, notes } = body;
+
+		// Validate required fields
+		if (!transactionId || !userId || !amount) {
+			return new Response(JSON.stringify({ error: "Missing required fields: transactionId, userId, amount" }), { status: 400 });
+		}
+
+		// Create fine payment record
+		const finePayment = await prisma.finePayment.create({
+			data: {
+				transactionId,
+				userId,
+				amount: parseFloat(amount),
+				processedBy: processedBy || "Admin",
+				notes: notes || "",
+			},
+		});
+
+		return new Response(JSON.stringify(finePayment), { status: 201 });
+	} catch (error) {
+		console.error("Error creating fine payment:", error);
+		return new Response(JSON.stringify({ error: "Failed to record fine payment" }), {
+			status: 500,
+		});
+	}
+}
+
 export async function GET(req) {
 	try {
 		// Get fine payments with related data

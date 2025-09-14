@@ -8,7 +8,7 @@ export default function AdminUsersPage() {
 	const [loading, setLoading] = useState(true);
 	const [showModal, setShowModal] = useState(false);
 	const [modalMode, setModalMode] = useState("edit"); // "edit" or "add"
-	const [form, setForm] = useState({ id: null, name: "", email: "", phone: "", city: "", postalCode: "", address: "", role: "STUDENT" });
+	const [form, setForm] = useState({ id: null, name: "", email: "", password: "", phone: "", city: "", postalCode: "", address: "", role: "STUDENT" });
 	const [verifyingUsers, setVerifyingUsers] = useState(new Set()); // Track users being verified
 
 	const [isUserDeletionModalOpen, setIsUserDeletionModalOpen] = useState(false);
@@ -63,24 +63,58 @@ export default function AdminUsersPage() {
 		setShowModal(true);
 	};
 
-	const handleEdit = async (e) => {
+	const openAddModal = () => {
+		setForm({ id: null, name: "", email: "", password: "", phone: "", city: "", postalCode: "", address: "", role: "STUDENT" });
+		setModalMode("add");
+		setShowModal(true);
+	};
+
+	const handleSubmit = async (e) => {
 		e.preventDefault();
-		await fetch("/api/users", {
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				id: form.id,
-				name: form.name,
-				phone: form.phone,
-				city: form.city,
-				postalCode: form.postalCode,
-				address: form.address,
-				role: form.role,
-				verifiedUser: form.verifiedUser,
-			}),
-		});
-		setShowModal(false);
-		fetchUsers();
+
+		if (modalMode === "add") {
+			// Create new user
+			const response = await fetch("/api/users", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					name: form.name,
+					email: form.email,
+					password: form.password,
+					phone: form.phone,
+					city: form.city,
+					postalCode: form.postalCode,
+					address: form.address,
+					role: form.role,
+				}),
+			});
+
+			if (response.ok) {
+				setShowModal(false);
+				fetchUsers();
+			} else {
+				const error = await response.json();
+				alert(error.error || "Failed to create user");
+			}
+		} else {
+			// Edit existing user
+			await fetch("/api/users", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					id: form.id,
+					name: form.name,
+					phone: form.phone,
+					city: form.city,
+					postalCode: form.postalCode,
+					address: form.address,
+					role: form.role,
+					verifiedUser: form.verifiedUser,
+				}),
+			});
+			setShowModal(false);
+			fetchUsers();
+		}
 	};
 
 	// const handleDelete = async (id) => {
@@ -121,6 +155,12 @@ export default function AdminUsersPage() {
 		<div className="p-6">
 			<div className="flex items-center justify-between mb-6">
 				<h1 className="text-2xl font-bold">Users</h1>
+				<button onClick={openAddModal} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex items-center gap-2">
+					<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+					</svg>
+					Add New User
+				</button>
 			</div>
 			<div className="overflow-x-auto rounded-lg shadow border bg-white">
 				<table className="min-w-full divide-y divide-gray-200">
@@ -195,14 +235,15 @@ export default function AdminUsersPage() {
 				</table>
 			</div>
 
-			{/* Modal for Edit User */}
+			{/* Modal for Add/Edit User */}
 			{showModal && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
 					<div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-						<h2 className="text-xl font-bold mb-4">Edit User</h2>
-						<form onSubmit={handleEdit} className="flex flex-col gap-3">
+						<h2 className="text-xl font-bold mb-4">{modalMode === "add" ? "Add New User" : "Edit User"}</h2>
+						<form onSubmit={handleSubmit} className="flex flex-col gap-3">
 							<input type="text" placeholder="Name" value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} className="border p-2 rounded" required />
-							<input type="text" placeholder="Email" value={form.email || ""} className="border p-2 rounded bg-gray-100 cursor-not-allowed" disabled />
+							<input type="email" placeholder="Email" value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} className={`border p-2 rounded ${modalMode === "edit" ? "bg-gray-100 cursor-not-allowed" : ""}`} disabled={modalMode === "edit"} required={modalMode === "add"} />
+							{modalMode === "add" && <input type="password" placeholder="Password" value={form.password || ""} onChange={(e) => setForm({ ...form, password: e.target.value })} className="border p-2 rounded" required />}
 							<input type="text" placeholder="Phone" value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="border p-2 rounded" />
 							<input type="text" placeholder="City" value={form.city || ""} onChange={(e) => setForm({ ...form, city: e.target.value })} className="border p-2 rounded" />
 							<input type="text" placeholder="Postal Code" value={form.postalCode || ""} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} className="border p-2 rounded" />
@@ -214,16 +255,18 @@ export default function AdminUsersPage() {
 									<option value="STUDENT">STUDENT</option>
 								</select>
 							</label>
-							<label className="flex items-center gap-2">
-								<span>Verified:</span>
-								<select value={form.verifiedUser || "No"} onChange={(e) => setForm({ ...form, verifiedUser: e.target.value })} className="border p-2 rounded">
-									<option value="No">No</option>
-									<option value="Yes">Yes</option>
-								</select>
-							</label>
+							{modalMode === "edit" && (
+								<label className="flex items-center gap-2">
+									<span>Verified:</span>
+									<select value={form.verifiedUser || "No"} onChange={(e) => setForm({ ...form, verifiedUser: e.target.value })} className="border p-2 rounded">
+										<option value="No">No</option>
+										<option value="Yes">Yes</option>
+									</select>
+								</label>
+							)}
 							<div className="flex gap-2 mt-4">
 								<button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
-									Update
+									{modalMode === "add" ? "Create User" : "Update User"}
 								</button>
 								<button type="button" onClick={() => setShowModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded shadow">
 									Cancel

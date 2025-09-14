@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import bcrypt from "bcrypt";
 import { sendVerificationSuccessEmail } from "@/lib/sendVerificationSuccessEmail";
 
 // Get all users
@@ -11,12 +12,46 @@ export async function GET() {
 
 // Create a new user
 export async function POST(req) {
-	const { name, email, password, phone, city, postalCode, address, role } = await req.json();
-	// You should hash the password in production!
-	const user = await prisma.user.create({
-		data: { name, email, password, phone, city, postalCode, address, role, verifiedUser: "No" },
-	});
-	return new Response(JSON.stringify(user));
+	try {
+		const { name, email, password, phone, city, postalCode, address, role } = await req.json();
+
+		// Check if user already exists
+		const existingUser = await prisma.user.findUnique({
+			where: { email },
+		});
+
+		if (existingUser) {
+			return new Response(JSON.stringify({ error: "User with this email already exists" }), {
+				status: 400,
+			});
+		}
+
+		// Hash the password
+		const hashedPassword = await bcrypt.hash(password, 10);
+
+		const user = await prisma.user.create({
+			data: {
+				name,
+				email,
+				password: hashedPassword,
+				phone,
+				city,
+				postalCode,
+				address,
+				role: role || "STUDENT",
+				verifiedUser: "Yes", // Admin-created users are automatically verified
+			},
+		});
+
+		// Return user without password
+		const { password: _, ...userWithoutPassword } = user;
+		return new Response(JSON.stringify(userWithoutPassword), { status: 201 });
+	} catch (error) {
+		console.error("Error creating user:", error);
+		return new Response(JSON.stringify({ error: "Failed to create user" }), {
+			status: 500,
+		});
+	}
 }
 
 // Update user (name, contact, role)

@@ -11,6 +11,24 @@ export default function ReportsPage() {
 	const [finePayments, setFinePayments] = useState([]);
 	const [fineSummary, setFineSummary] = useState({});
 	const [fineFilter, setFineFilter] = useState("all");
+	const [dateRange, setDateRange] = useState({ from: "", to: "" });
+	const [isClient, setIsClient] = useState(false);
+
+	// Ensure client-side rendering for dates
+	useEffect(() => {
+		setIsClient(true);
+	}, []);
+
+	// Utility function for consistent date formatting
+	const formatDate = (date, options = {}) => {
+		if (!isClient) return ""; // Return empty during SSR
+		return new Date(date).toLocaleDateString("en-GB", options);
+	};
+
+	const formatDateTime = (date) => {
+		if (!isClient) return ""; // Return empty during SSR
+		return `${new Date(date).toLocaleDateString("en-GB")} at ${new Date(date).toLocaleTimeString("en-GB")}`;
+	};
 
 	const reports = ["users", "books", "issues", "returns", "defaulters", "fines"];
 
@@ -22,8 +40,31 @@ export default function ReportsPage() {
 			issues: "Book Issues Report",
 			returns: "Book Returns Report",
 			defaulters: "Defaulters Report",
+			fines: "Fine Payments Report",
 		};
 		return titles[reportType] || `${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`;
+	};
+
+	// Get filter information for print
+	const getFilterInfo = () => {
+		if (activeReport !== "fines" || fineFilter === "all") return "";
+
+		const filterLabels = {
+			today: "Today",
+			week: "Last Week",
+			month: "Last Month",
+			custom: "Custom Date Range",
+		};
+
+		let filterText = `Filter: ${filterLabels[fineFilter] || fineFilter}`;
+
+		if (fineFilter === "custom" && (dateRange.from || dateRange.to)) {
+			const fromDate = dateRange.from ? formatDate(dateRange.from) : "N/A";
+			const toDate = dateRange.to ? formatDate(dateRange.to) : "N/A";
+			filterText += ` (From: ${fromDate}, To: ${toDate})`;
+		}
+
+		return filterText;
 	};
 
 	// Header mappings for meaningful display
@@ -164,7 +205,7 @@ export default function ReportsPage() {
 
 		// Format dates
 		if (key.includes("At") || key === "deadline") {
-			return val ? new Date(val).toLocaleDateString() : "-";
+			return val ? formatDate(val) : "-";
 		}
 
 		// Format status for issues
@@ -223,18 +264,37 @@ export default function ReportsPage() {
 		if (fineFilter === "all") return finePayments;
 
 		const now = new Date();
-		const filterDate = new Date();
+		let filterStartDate = new Date();
+		let filterEndDate = new Date();
 
 		switch (fineFilter) {
 			case "today":
-				filterDate.setHours(0, 0, 0, 0);
-				return finePayments.filter((payment) => new Date(payment.paidAt) >= filterDate);
+				filterStartDate.setHours(0, 0, 0, 0);
+				filterEndDate.setHours(23, 59, 59, 999);
+				return finePayments.filter((payment) => {
+					const paymentDate = new Date(payment.paidAt);
+					return paymentDate >= filterStartDate && paymentDate <= filterEndDate;
+				});
 			case "week":
-				filterDate.setDate(now.getDate() - 7);
-				return finePayments.filter((payment) => new Date(payment.paidAt) >= filterDate);
+				filterStartDate.setDate(now.getDate() - 7);
+				filterStartDate.setHours(0, 0, 0, 0);
+				return finePayments.filter((payment) => new Date(payment.paidAt) >= filterStartDate);
 			case "month":
-				filterDate.setMonth(now.getMonth() - 1);
-				return finePayments.filter((payment) => new Date(payment.paidAt) >= filterDate);
+				filterStartDate.setMonth(now.getMonth() - 1);
+				filterStartDate.setHours(0, 0, 0, 0);
+				return finePayments.filter((payment) => new Date(payment.paidAt) >= filterStartDate);
+			case "custom":
+				if (!dateRange.from && !dateRange.to) return finePayments;
+
+				const fromDate = dateRange.from ? new Date(dateRange.from + "T00:00:00") : null;
+				const toDate = dateRange.to ? new Date(dateRange.to + "T23:59:59") : null;
+
+				return finePayments.filter((payment) => {
+					const paymentDate = new Date(payment.paidAt);
+					const afterFrom = !fromDate || paymentDate >= fromDate;
+					const beforeTo = !toDate || paymentDate <= toDate;
+					return afterFrom && beforeTo;
+				});
 			default:
 				return finePayments;
 		}
@@ -244,8 +304,96 @@ export default function ReportsPage() {
 	const filteredTotal = filteredPayments.reduce((sum, payment) => sum + payment.amount, 0);
 
 	const handleDownload = (format) => {
-		alert(`Downloading ${activeReport} report as ${format}`);
-		// TODO: hook this to backend API (PDF/CSV export)
+		if (format === "csv") {
+			downloadCSV();
+		} else {
+			alert(`Downloading ${activeReport} report as ${format}`);
+			// TODO: implement PDF export
+		}
+	};
+
+	// CSV Export functionality
+	const downloadCSV = () => {
+		let csvContent = "";
+		let filename = "";
+
+		if (activeReport === "fines") {
+			// Handle fine reports
+			const headers = ["S.N.", "Date & Time", "Student Name", "Student Email", "Book Title", "Book Author", "Amount (NOK)", "Processed By", "Notes"];
+			csvContent = headers.join(",") + "\n";
+
+			filteredPayments.forEach((payment, index) => {
+				const row = [index + 1, `"${formatDateTime(payment.paidAt)}"`, `"${payment.user.name || "N/A"}"`, `"${payment.user.email}"`, `"${payment.transaction.book.title}"`, `"${payment.transaction.book.author}"`, payment.amount, `"${payment.processedBy || "N/A"}"`, `"${payment.notes || "-"}"`];
+				csvContent += row.join(",") + "\n";
+			});
+
+			// Add filter info to filename
+			const filterSuffix = fineFilter !== "all" ? `_${fineFilter}` : "";
+			filename = `fine_payments_report${filterSuffix}_${new Date().toISOString().split("T")[0]}.csv`;
+		} else {
+			// Handle other reports
+			if (!data || data.length === 0) {
+				alert("No data to export");
+				return;
+			}
+
+			// Get headers based on report type
+			let headers = [];
+			let columnOrder = [];
+
+			if (activeReport === "issues") {
+				columnOrder = getIssuesColumnOrder(data);
+				headers = ["S.N.", ...columnOrder.map((key) => getHeaderLabel(key, activeReport))];
+			} else if (activeReport === "returns") {
+				columnOrder = getReturnsColumnOrder(data);
+				headers = ["S.N.", ...columnOrder.map((key) => getHeaderLabel(key, activeReport))];
+			} else if (activeReport === "defaulters") {
+				columnOrder = getDefaultersColumnOrder(data);
+				headers = ["S.N.", ...columnOrder.map((key) => getHeaderLabel(key, activeReport))];
+			} else {
+				// For users and books
+				columnOrder = Object.keys(data[0]).filter((key, index, arr) => {
+					if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
+					if (activeReport === "users") return key !== "id";
+					return true;
+				});
+				headers = ["S.N.", ...columnOrder.map((key) => getHeaderLabel(key, activeReport))];
+			}
+
+			csvContent = headers.join(",") + "\n";
+
+			// Add data rows
+			data.forEach((row, index) => {
+				const csvRow = [index + 1];
+
+				columnOrder.forEach((key) => {
+					let cellValue = formatCellValue(key, row[key], activeReport);
+					// Escape quotes and wrap in quotes if contains comma or quotes
+					if (typeof cellValue === "string" && (cellValue.includes(",") || cellValue.includes('"'))) {
+						cellValue = `"${cellValue.replace(/"/g, '""')}"`;
+					}
+					csvRow.push(cellValue);
+				});
+
+				csvContent += csvRow.join(",") + "\n";
+			});
+
+			filename = `${activeReport}_report_${new Date().toISOString().split("T")[0]}.csv`;
+		}
+
+		// Create and download the file
+		const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+		const link = document.createElement("a");
+
+		if (link.download !== undefined) {
+			const url = URL.createObjectURL(blob);
+			link.setAttribute("href", url);
+			link.setAttribute("download", filename);
+			link.style.visibility = "hidden";
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+		}
 	};
 
 	const handlePrint = () => {
@@ -310,29 +458,79 @@ export default function ReportsPage() {
 					.print-table {
 						width: 100%;
 						border-collapse: collapse;
-						font-size: 10px;
+						font-size: 8px;
 						table-layout: fixed;
 						background: white;
+						margin-top: 10px;
 					}
 
 					.print-table th,
 					.print-table td {
 						border: 1px solid #000;
-						padding: 4px 2px;
+						padding: 3px 2px;
 						text-align: left;
 						overflow: hidden;
 						text-overflow: ellipsis;
 						white-space: nowrap;
 						background: white;
+						vertical-align: top;
 					}
 
 					.print-table th {
 						background-color: #f0f0f0;
 						font-weight: bold;
-						font-size: 9px;
+						font-size: 8px;
+						text-align: center;
 					}
 
-					/* Column widths */
+					/* Column widths for fine reports */
+					.print-table th:nth-child(1),
+					.print-table td:nth-child(1) {
+						width: 5%; /* S.N. */
+					}
+
+					.print-table th:nth-child(2),
+					.print-table td:nth-child(2) {
+						width: 12%; /* Date & Time */
+					}
+
+					.print-table th:nth-child(3),
+					.print-table td:nth-child(3) {
+						width: 12%; /* Student Name */
+					}
+
+					.print-table th:nth-child(4),
+					.print-table td:nth-child(4) {
+						width: 15%; /* Student Email */
+					}
+
+					.print-table th:nth-child(5),
+					.print-table td:nth-child(5) {
+						width: 15%; /* Book Title */
+					}
+
+					.print-table th:nth-child(6),
+					.print-table td:nth-child(6) {
+						width: 12%; /* Book Author */
+					}
+
+					.print-table th:nth-child(7),
+					.print-table td:nth-child(7) {
+						width: 8%; /* Amount */
+						text-align: right;
+					}
+
+					.print-table th:nth-child(8),
+					.print-table td:nth-child(8) {
+						width: 10%; /* Processed By */
+					}
+
+					.print-table th:nth-child(9),
+					.print-table td:nth-child(9) {
+						width: 11%; /* Notes */
+					}
+
+					/* Default column widths for other reports */
 					.print-table th:first-child,
 					.print-table td:first-child {
 						width: 8%;
@@ -345,10 +543,55 @@ export default function ReportsPage() {
 				<div className="print-header">
 					<h1 className="print-title">Mini Library Management System</h1>
 					<h2 className="print-subtitle">{getReportTitle(activeReport)}</h2>
-					<p className="print-date">Generated on: {new Date().toLocaleDateString()}</p>
+					<p className="print-date">Generated on: {formatDate(new Date())}</p>
+					{getFilterInfo() && (
+						<p className="print-date" style={{ marginTop: "5px", fontStyle: "italic" }}>
+							{getFilterInfo()}
+						</p>
+					)}
+					{activeReport === "fines" && filteredPayments.length > 0 && (
+						<p className="print-date" style={{ marginTop: "5px" }}>
+							Total Records: {filteredPayments.length} | Total Amount: {filteredTotal} NOK
+						</p>
+					)}
 				</div>
 
-				{!loading && data.length > 0 && (
+				{/* Print table for fine reports */}
+				{activeReport === "fines" && filteredPayments.length > 0 && (
+					<table className="print-table">
+						<thead>
+							<tr>
+								<th>S.N.</th>
+								<th>Date & Time</th>
+								<th>Student Name</th>
+								<th>Student Email</th>
+								<th>Book Title</th>
+								<th>Book Author</th>
+								<th>Amount (NOK)</th>
+								<th>Processed By</th>
+								<th>Notes</th>
+							</tr>
+						</thead>
+						<tbody>
+							{filteredPayments.map((payment, i) => (
+								<tr key={payment.id}>
+									<td>{i + 1}</td>
+									<td>{formatDateTime(payment.paidAt)}</td>
+									<td>{payment.user.name || "N/A"}</td>
+									<td>{payment.user.email}</td>
+									<td>{payment.transaction.book.title}</td>
+									<td>{payment.transaction.book.author}</td>
+									<td>{payment.amount}</td>
+									<td>{payment.processedBy || "N/A"}</td>
+									<td>{payment.notes || "-"}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				)}
+
+				{/* Print table for other reports */}
+				{!loading && data.length > 0 && activeReport !== "fines" && (
 					<table className="print-table">
 						<thead>
 							<tr>
@@ -390,6 +633,11 @@ export default function ReportsPage() {
 						</tbody>
 					</table>
 				)}
+
+				{/* No data message for print */}
+				{activeReport === "fines" && filteredPayments.length === 0 && <div style={{ textAlign: "center", padding: "20px", fontSize: "14px" }}>No fine payment records found for the selected criteria.</div>}
+
+				{activeReport !== "fines" && (!data || data.length === 0) && <div style={{ textAlign: "center", padding: "20px", fontSize: "14px" }}>No {activeReport} records found.</div>}
 			</div>
 
 			{/* Screen content */}
@@ -500,22 +748,50 @@ export default function ReportsPage() {
 							<div className="bg-white rounded-lg shadow mb-6">
 								<div className="p-6 border-b border-gray-200">
 									<h2 className="text-lg font-semibold mb-4">Payment History</h2>
-									<div className="flex space-x-4">
+									<div className="flex flex-wrap space-x-4 mb-4">
 										{[
 											{ key: "all", label: "All Time" },
 											{ key: "today", label: "Today" },
 											{ key: "week", label: "Last Week" },
 											{ key: "month", label: "Last Month" },
+											{ key: "custom", label: "Custom Range" },
 										].map((option) => (
 											<button key={option.key} onClick={() => setFineFilter(option.key)} className={`px-4 py-2 rounded-lg text-sm font-medium ${fineFilter === option.key ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
 												{option.label}
 											</button>
 										))}
 									</div>
+
+									{/* Custom Date Range Inputs */}
+									{fineFilter === "custom" && (
+										<div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-lg">
+											<div className="flex flex-col">
+												<label className="text-sm font-medium text-gray-700 mb-1">From Date</label>
+												<input type="date" value={dateRange.from} onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+											</div>
+											<div className="flex flex-col">
+												<label className="text-sm font-medium text-gray-700 mb-1">To Date</label>
+												<input type="date" value={dateRange.to} onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+											</div>
+											<div className="flex flex-col justify-end">
+												<button onClick={() => setDateRange({ from: "", to: "" })} className="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md">
+													Clear Dates
+												</button>
+											</div>
+										</div>
+									)}
+
 									{fineFilter !== "all" && (
 										<div className="mt-4 p-3 bg-blue-50 rounded-lg">
 											<p className="text-sm text-blue-800">
 												<strong>Filtered Results:</strong> {filteredPayments.length} payments totaling {filteredTotal} NOK
+												{fineFilter === "custom" && (dateRange.from || dateRange.to) && (
+													<span className="block mt-1">
+														<strong>Date Range:</strong>
+														{dateRange.from && ` From ${formatDate(dateRange.from)}`}
+														{dateRange.to && ` To ${formatDate(dateRange.to)}`}
+													</span>
+												)}
 											</p>
 										</div>
 									)}
@@ -544,9 +820,7 @@ export default function ReportsPage() {
 											) : (
 												filteredPayments.map((payment) => (
 													<tr key={payment.id} className="hover:bg-gray-50">
-														<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-															{new Date(payment.paidAt).toLocaleDateString()} at {new Date(payment.paidAt).toLocaleTimeString()}
-														</td>
+														<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDateTime(payment.paidAt)}</td>
 														<td className="px-6 py-4 whitespace-nowrap">
 															<div className="text-sm font-medium text-gray-900">{payment.user.name || "N/A"}</div>
 															<div className="text-sm text-gray-500">{payment.user.email}</div>
