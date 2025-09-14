@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
+import { Html5QrcodeScanner } from "html5-qrcode";
 
 export default function AdminIssuePage() {
 	const [users, setUsers] = useState([]);
@@ -12,6 +13,12 @@ export default function AdminIssuePage() {
 	const bookInputRef = useRef();
 	const [message, setMessage] = useState("");
 	const [loading, setLoading] = useState(false);
+
+	// QR Scanner states
+	const [showUserScanner, setShowUserScanner] = useState(false);
+	const [showBookScanner, setShowBookScanner] = useState(false);
+	const userScannerRef = useRef(null);
+	const bookScannerRef = useRef(null);
 
 	useEffect(() => {
 		fetch("/api/users")
@@ -31,8 +38,153 @@ export default function AdminIssuePage() {
 			});
 	}, []);
 
+	// Cleanup scanners on unmount
+	useEffect(() => {
+		return () => {
+			if (userScannerRef.current) {
+				userScannerRef.current.clear().catch(console.error);
+			}
+			if (bookScannerRef.current) {
+				bookScannerRef.current.clear().catch(console.error);
+			}
+		};
+	}, []);
+
 	const filteredUsers = users.filter((u) => (u.name && u.name.toLowerCase().includes(userQuery.toLowerCase())) || (u.email && u.email.toLowerCase().includes(userQuery.toLowerCase())) || (u.membershipNumber && u.membershipNumber.toLowerCase().includes(userQuery.toLowerCase())));
 	const filteredBooks = books.filter((b) => (b.title && b.title.toLowerCase().includes(bookQuery.toLowerCase())) || (b.author && b.author.toLowerCase().includes(bookQuery.toLowerCase())) || (b.isbn && b.isbn.toLowerCase().includes(bookQuery.toLowerCase())));
+
+	// QR Scanner Functions
+	const startUserScanner = () => {
+		console.log("Starting user scanner...");
+		setShowUserScanner(true);
+		setTimeout(() => {
+			console.log("Initializing user scanner DOM element...");
+			try {
+				const scanner = new Html5QrcodeScanner(
+					"user-qr-scanner",
+					{
+						fps: 10,
+						qrbox: { width: 250, height: 250 },
+						aspectRatio: 1.0,
+						showTorchButtonIfSupported: true,
+						showZoomSliderIfSupported: true,
+						defaultZoomValueIfSupported: 2,
+						experimentalFeatures: {
+							useBarCodeDetectorIfSupported: true,
+						},
+					},
+					/* verbose= */ false
+				);
+
+				scanner.render(
+					(decodedText) => {
+						// Handle successful scan
+						console.log("User QR scanned:", decodedText);
+						setUserQuery(decodedText);
+						setSelectedUser(null);
+						scanner
+							.clear()
+							.then(() => {
+								setShowUserScanner(false);
+								// Auto-focus to book input after successful scan
+								setTimeout(() => {
+									if (bookInputRef.current) {
+										bookInputRef.current.focus();
+									}
+								}, 100);
+							})
+							.catch((err) => {
+								console.error("Error clearing user scanner:", err);
+								setShowUserScanner(false);
+							});
+					},
+					(error) => {
+						// Handle scan error (usually just no QR code detected)
+						if (error && !error.includes("No MultiFormat Readers") && !error.includes("NotFoundException")) {
+							console.log("QR scan error:", error);
+						}
+					}
+				);
+
+				userScannerRef.current = scanner;
+			} catch (error) {
+				console.error("Failed to start user scanner:", error);
+				alert("Failed to start camera. Please check camera permissions and try again.");
+				setShowUserScanner(false);
+			}
+		}, 300);
+	};
+
+	const startBookScanner = () => {
+		console.log("Starting book scanner...");
+		setShowBookScanner(true);
+		setTimeout(() => {
+			console.log("Initializing book scanner DOM element...");
+			try {
+				const scanner = new Html5QrcodeScanner(
+					"book-qr-scanner",
+					{
+						fps: 10,
+						qrbox: { width: 250, height: 250 },
+						aspectRatio: 1.0,
+						showTorchButtonIfSupported: true,
+						showZoomSliderIfSupported: true,
+						defaultZoomValueIfSupported: 2,
+						experimentalFeatures: {
+							useBarCodeDetectorIfSupported: true,
+						},
+					},
+					/* verbose= */ false
+				);
+
+				scanner.render(
+					(decodedText) => {
+						// Handle successful scan
+						console.log("Book QR scanned:", decodedText);
+						setBookQuery(decodedText);
+						setSelectedBook(null);
+						scanner
+							.clear()
+							.then(() => {
+								setShowBookScanner(false);
+							})
+							.catch((err) => {
+								console.error("Error clearing book scanner:", err);
+								setShowBookScanner(false);
+							});
+					},
+					(error) => {
+						// Handle scan error
+						if (error && !error.includes("No MultiFormat Readers") && !error.includes("NotFoundException")) {
+							console.log("QR scan error:", error);
+						}
+					}
+				);
+
+				bookScannerRef.current = scanner;
+			} catch (error) {
+				console.error("Failed to start book scanner:", error);
+				alert("Failed to start camera. Please check camera permissions and try again.");
+				setShowBookScanner(false);
+			}
+		}, 300);
+	};
+
+	const stopUserScanner = () => {
+		if (userScannerRef.current) {
+			userScannerRef.current.clear().catch(console.error);
+			userScannerRef.current = null;
+		}
+		setShowUserScanner(false);
+	};
+
+	const stopBookScanner = () => {
+		if (bookScannerRef.current) {
+			bookScannerRef.current.clear().catch(console.error);
+			bookScannerRef.current = null;
+		}
+		setShowBookScanner(false);
+	};
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
@@ -64,18 +216,44 @@ export default function AdminIssuePage() {
 				{/* User Combobox */}
 				<div>
 					<label className="block mb-1 font-medium">User</label>
-					<input
-						ref={userInputRef}
-						type="text"
-						placeholder="Search user by ID, name or email"
-						value={userQuery}
-						onChange={(e) => {
-							setUserQuery(e.target.value);
-							setSelectedUser(null);
-						}}
-						className="border p-2 rounded w-full mb-2"
-						autoComplete="off"
-					/>
+					<div className="flex gap-2 mb-2">
+						<input
+							ref={userInputRef}
+							type="text"
+							placeholder="Search user by membership ID, name or email"
+							value={userQuery}
+							onChange={(e) => {
+								setUserQuery(e.target.value);
+								setSelectedUser(null);
+							}}
+							className="border p-2 rounded flex-1"
+							autoComplete="off"
+						/>
+						<button type="button" onClick={showUserScanner ? stopUserScanner : startUserScanner} className={`px-3 py-2 rounded font-medium transition ${showUserScanner ? "bg-red-500 hover:bg-red-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}`} title={showUserScanner ? "Stop QR Scanner" : "Scan Membership QR Code"}>
+							{showUserScanner ? "🛑" : "📱"}
+						</button>
+					</div>
+
+					{/* QR Scanner for User */}
+					{showUserScanner && (
+						<div className="mb-4 p-4 border rounded bg-gray-50">
+							<div className="flex justify-between items-center mb-2">
+								<h4 className="font-medium">Scan Membership QR Code</h4>
+								<button type="button" onClick={stopUserScanner} className="text-red-600 hover:text-red-800">
+									✕
+								</button>
+							</div>
+							<div className="text-sm text-gray-600 mb-3">
+								<p>📱 Allow camera access when prompted</p>
+								<p>🎯 Point camera at QR code on membership card</p>
+								<p>💡 Make sure QR code is clearly visible and well-lit</p>
+								<p className="text-blue-600 mt-2">
+									<strong>Tip:</strong> If camera doesn't work, you can manually type the membership number above
+								</p>
+							</div>
+							<div id="user-qr-scanner" className="w-full"></div>
+						</div>
+					)}
 					{userQuery && filteredUsers.length > 0 && (
 						<ul className="border rounded bg-white max-h-40 overflow-y-auto shadow mt-1">
 							{filteredUsers.map((u) => (
@@ -101,18 +279,44 @@ export default function AdminIssuePage() {
 				{/* Book Combobox */}
 				<div>
 					<label className="block mb-1 font-medium">Book</label>
-					<input
-						ref={bookInputRef}
-						type="text"
-						placeholder="Search book by title or author or ISBN"
-						value={bookQuery}
-						onChange={(e) => {
-							setBookQuery(e.target.value);
-							setSelectedBook(null);
-						}}
-						className="border p-2 rounded w-full mb-2"
-						autoComplete="off"
-					/>
+					<div className="flex gap-2 mb-2">
+						<input
+							ref={bookInputRef}
+							type="text"
+							placeholder="Search book by title, author or ISBN"
+							value={bookQuery}
+							onChange={(e) => {
+								setBookQuery(e.target.value);
+								setSelectedBook(null);
+							}}
+							className="border p-2 rounded flex-1"
+							autoComplete="off"
+						/>
+						<button type="button" onClick={showBookScanner ? stopBookScanner : startBookScanner} className={`px-3 py-2 rounded font-medium transition ${showBookScanner ? "bg-red-500 hover:bg-red-600 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`} title={showBookScanner ? "Stop QR Scanner" : "Scan Book ISBN QR Code"}>
+							{showBookScanner ? "🛑" : "📚"}
+						</button>
+					</div>
+
+					{/* QR Scanner for Book */}
+					{showBookScanner && (
+						<div className="mb-4 p-4 border rounded bg-gray-50">
+							<div className="flex justify-between items-center mb-2">
+								<h4 className="font-medium">Scan Book ISBN QR Code</h4>
+								<button type="button" onClick={stopBookScanner} className="text-red-600 hover:text-red-800">
+									✕
+								</button>
+							</div>
+							<div className="text-sm text-gray-600 mb-3">
+								<p>📱 Allow camera access when prompted</p>
+								<p>📚 Point camera at QR code on book cover or ISBN barcode</p>
+								<p>💡 Make sure code is clearly visible and well-lit</p>
+								<p className="text-blue-600 mt-2">
+									<strong>Tip:</strong> If camera doesn't work, you can manually type the ISBN above
+								</p>
+							</div>
+							<div id="book-qr-scanner" className="w-full"></div>
+						</div>
+					)}
 					{bookQuery && filteredBooks.length > 0 && (
 						<ul className="border rounded bg-white max-h-40 overflow-y-auto shadow mt-1">
 							{filteredBooks.map((b) => (
