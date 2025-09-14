@@ -31,8 +31,8 @@ export default function AdminIssuePage() {
 			});
 	}, []);
 
-	const filteredUsers = users.filter((u) => (u.name && u.name.toLowerCase().includes(userQuery.toLowerCase())) || (u.email && u.email.toLowerCase().includes(userQuery.toLowerCase())));
-	const filteredBooks = books.filter((b) => (b.title && b.title.toLowerCase().includes(bookQuery.toLowerCase())) || (b.author && b.author.toLowerCase().includes(bookQuery.toLowerCase())));
+	const filteredUsers = users.filter((u) => (u.name && u.name.toLowerCase().includes(userQuery.toLowerCase())) || (u.email && u.email.toLowerCase().includes(userQuery.toLowerCase())) || (u.membershipNumber && u.membershipNumber.toLowerCase().includes(userQuery.toLowerCase())));
+	const filteredBooks = books.filter((b) => (b.title && b.title.toLowerCase().includes(bookQuery.toLowerCase())) || (b.author && b.author.toLowerCase().includes(bookQuery.toLowerCase())) || (b.isbn && b.isbn.toLowerCase().includes(bookQuery.toLowerCase())));
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
@@ -67,7 +67,7 @@ export default function AdminIssuePage() {
 					<input
 						ref={userInputRef}
 						type="text"
-						placeholder="Search user by name or email"
+						placeholder="Search user by ID, name or email"
 						value={userQuery}
 						onChange={(e) => {
 							setUserQuery(e.target.value);
@@ -91,7 +91,7 @@ export default function AdminIssuePage() {
 										{u.name || u.email} <span className="text-xs text-gray-500">({u.email})</span>
 									</div>
 									<div className="text-xs text-gray-500">
-										Role: {u.role} | Verified: {u.verifiedUser}
+										{u.role} | Membership No: {u.membershipNumber}
 									</div>
 								</li>
 							))}
@@ -104,7 +104,7 @@ export default function AdminIssuePage() {
 					<input
 						ref={bookInputRef}
 						type="text"
-						placeholder="Search book by title or author"
+						placeholder="Search book by title or author or ISBN"
 						value={bookQuery}
 						onChange={(e) => {
 							setBookQuery(e.target.value);
@@ -127,7 +127,9 @@ export default function AdminIssuePage() {
 									<div className="font-medium">
 										{b.title} <span className="text-xs text-gray-500">by {b.author}</span>
 									</div>
-									<div className="text-xs text-gray-500">{b.availableCopies}</div>
+									<div className="text-xs text-gray-500">
+										{b.availableCopies} {b.isbn && `| ISBN: ${b.isbn}`}
+									</div>
 								</li>
 							))}
 						</ul>
