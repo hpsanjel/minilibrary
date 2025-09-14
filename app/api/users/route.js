@@ -1,11 +1,23 @@
 import prisma from "@/lib/prisma";
 import bcrypt from "bcrypt";
 import { sendVerificationSuccessEmail } from "@/lib/sendVerificationSuccessEmail";
+import { generateMembershipNumber } from "@/lib/membershipUtils";
 
 // Get all users
 export async function GET() {
 	const users = await prisma.user.findMany({
-		select: { id: true, name: true, email: true, phone: true, city: true, postalCode: true, address: true, role: true, verifiedUser: true },
+		select: {
+			id: true,
+			membershipNumber: true,
+			name: true,
+			email: true,
+			phone: true,
+			city: true,
+			postalCode: true,
+			address: true,
+			role: true,
+			verifiedUser: true,
+		},
 	});
 	return new Response(JSON.stringify(users));
 }
@@ -29,8 +41,12 @@ export async function POST(req) {
 		// Hash the password
 		const hashedPassword = await bcrypt.hash(password, 10);
 
+		// Generate membership number
+		const membershipNumber = await generateMembershipNumber();
+
 		const user = await prisma.user.create({
 			data: {
+				membershipNumber,
 				name,
 				email,
 				password: hashedPassword,

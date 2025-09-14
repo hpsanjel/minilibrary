@@ -166,6 +166,7 @@ export default function AdminUsersPage() {
 				<table className="min-w-full divide-y divide-gray-200">
 					<thead className="bg-gray-50">
 						<tr>
+							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membership #</th>
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
@@ -180,19 +181,20 @@ export default function AdminUsersPage() {
 					<tbody className="bg-white divide-y divide-gray-200">
 						{loading ? (
 							<tr>
-								<td colSpan={9} className="text-center py-8 text-gray-400">
+								<td colSpan={7} className="text-center py-8 text-gray-400">
 									Loading...
 								</td>
 							</tr>
 						) : users.length === 0 ? (
 							<tr>
-								<td colSpan={9} className="text-center py-8 text-gray-400">
+								<td colSpan={7} className="text-center py-8 text-gray-400">
 									No users found.
 								</td>
 							</tr>
 						) : (
 							users.map((user) => (
 								<tr key={user.id} className="hover:bg-gray-50">
+									<td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-blue-600 font-semibold">{user.membershipNumber || "-"}</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">{user.name || "-"}</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">{user.email}</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">{user.phone || "-"}</td>

@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { sendVerificationEmail } from "@/lib/sendVerificationEmail";
 import { getBaseUrl } from "@/lib/getBaseUrl";
+import { generateMembershipNumber } from "@/lib/membershipUtils";
 
 export async function POST(req) {
 	try {
@@ -18,8 +19,13 @@ export async function POST(req) {
 		// Generate verification token
 		const token = crypto.randomBytes(32).toString("hex");
 		const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+		// Generate membership number
+		const membershipNumber = await generateMembershipNumber();
+
 		const user = await prisma.user.create({
 			data: {
+				membershipNumber,
 				name,
 				email,
 				password: hashed,
