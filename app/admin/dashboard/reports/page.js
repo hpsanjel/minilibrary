@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { FileDown, Printer } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function ReportsPage() {
 	const [activeReport, setActiveReport] = useState("users");
@@ -306,9 +308,10 @@ export default function ReportsPage() {
 	const handleDownload = (format) => {
 		if (format === "csv") {
 			downloadCSV();
+		} else if (format === "pdf") {
+			downloadPDF();
 		} else {
 			alert(`Downloading ${activeReport} report as ${format}`);
-			// TODO: implement PDF export
 		}
 	};
 
@@ -394,6 +397,131 @@ export default function ReportsPage() {
 			link.click();
 			document.body.removeChild(link);
 		}
+	};
+
+	// PDF Export functionality
+	const downloadPDF = () => {
+		const doc = new jsPDF();
+		const currentDate = new Date().toLocaleDateString("en-GB");
+		let filename = "";
+
+		// Set document properties
+		doc.setProperties({
+			title: `${activeReport.charAt(0).toUpperCase() + activeReport.slice(1)} Report`,
+			subject: `Mini Library ${activeReport} Report`,
+			author: "Mini Library System",
+			creator: "Mini Library Admin",
+		});
+
+		// Add header
+		doc.setFontSize(20);
+		doc.setFont("helvetica", "bold");
+		doc.text("Mini Library Management System", 14, 20);
+
+		doc.setFontSize(16);
+		doc.text(`${activeReport.charAt(0).toUpperCase() + activeReport.slice(1)} Report`, 14, 30);
+
+		doc.setFontSize(10);
+		doc.setFont("helvetica", "normal");
+		doc.text(`Generated on: ${currentDate}`, 14, 40);
+
+		if (activeReport === "fines") {
+			// Handle fine reports
+			if (fineFilter !== "all") {
+				doc.text(`Filter: ${fineFilter} payments`, 14, 47);
+			}
+			if (dateRange.from || dateRange.to) {
+				const dateRangeText = `Date Range: ${dateRange.from || "Start"} to ${dateRange.to || "End"}`;
+				doc.text(dateRangeText, 14, 54);
+			}
+
+			const headers = [["S.N.", "Date & Time", "Student Name", "Student Email", "Book Title", "Book Author", "Amount (NOK)", "Processed By", "Notes"]];
+			const tableData = filteredPayments.map((payment, index) => [index + 1, formatDateTime(payment.paidAt), payment.user.name || "N/A", payment.user.email, payment.transaction.book.title, payment.transaction.book.author, `${payment.amount} NOK`, payment.processedBy || "N/A", payment.notes || "-"]);
+
+			autoTable(doc, {
+				head: headers,
+				body: tableData,
+				startY: fineFilter !== "all" || dateRange.from || dateRange.to ? 65 : 58,
+				styles: { fontSize: 8 },
+				headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+				alternateRowStyles: { fillColor: [245, 245, 245] },
+				margin: { top: 20, right: 14, bottom: 20, left: 14 },
+				didDrawPage: function (data) {
+					// Add page numbers
+					doc.setFontSize(8);
+					doc.text(`Page ${data.pageNumber}`, doc.internal.pageSize.width - 25, doc.internal.pageSize.height - 10);
+				},
+			});
+
+			// Add summary
+			const finalY = doc.lastAutoTable.finalY + 10;
+			doc.setFontSize(12);
+			doc.setFont("helvetica", "bold");
+			doc.text(`Total Amount: ${filteredTotal} NOK`, 14, finalY);
+			doc.text(`Total Payments: ${filteredPayments.length}`, 14, finalY + 7);
+
+			const filterSuffix = fineFilter !== "all" ? `_${fineFilter}` : "";
+			filename = `fine_payments_report${filterSuffix}_${new Date().toISOString().split("T")[0]}.pdf`;
+		} else {
+			// Handle other reports
+			if (!data || data.length === 0) {
+				alert("No data to export");
+				return;
+			}
+
+			let headers = [];
+			let columnOrder = [];
+			let tableData = [];
+
+			if (activeReport === "issues") {
+				columnOrder = getIssuesColumnOrder(data);
+				headers = [["S.N.", ...columnOrder.map((key) => getHeaderLabel(key, activeReport))]];
+				tableData = data.map((row, index) => [index + 1, ...columnOrder.map((key) => formatCellValue(key, row[key], activeReport))]);
+			} else if (activeReport === "returns") {
+				columnOrder = getReturnsColumnOrder(data);
+				headers = [["S.N.", ...columnOrder.map((key) => getHeaderLabel(key, activeReport))]];
+				tableData = data.map((row, index) => [index + 1, ...columnOrder.map((key) => formatCellValue(key, row[key], activeReport))]);
+			} else if (activeReport === "defaulters") {
+				columnOrder = getDefaultersColumnOrder(data);
+				headers = [["S.N.", ...columnOrder.map((key) => getHeaderLabel(key, activeReport))]];
+				tableData = data.map((row, index) => [index + 1, ...columnOrder.map((key) => formatCellValue(key, row[key], activeReport))]);
+			} else {
+				// For users and books
+				columnOrder = Object.keys(data[0]).filter((key, index, arr) => {
+					if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
+					if (activeReport === "users") return key !== "id";
+					return true;
+				});
+				headers = [["S.N.", ...columnOrder.map((key) => getHeaderLabel(key, activeReport))]];
+				tableData = data.map((row, index) => [index + 1, ...columnOrder.map((key) => formatCellValue(key, row[key], activeReport))]);
+			}
+
+			autoTable(doc, {
+				head: headers,
+				body: tableData,
+				startY: 50,
+				styles: { fontSize: 8 },
+				headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+				alternateRowStyles: { fillColor: [245, 245, 245] },
+				margin: { top: 20, right: 14, bottom: 20, left: 14 },
+				didDrawPage: function (data) {
+					// Add page numbers
+					doc.setFontSize(8);
+					doc.text(`Page ${data.pageNumber}`, doc.internal.pageSize.width - 25, doc.internal.pageSize.height - 10);
+				},
+			});
+
+			// Add summary
+			const finalY = doc.lastAutoTable.finalY + 10;
+			doc.setFontSize(12);
+			doc.setFont("helvetica", "bold");
+			doc.text(`Total Records: ${data.length}`, 14, finalY);
+
+			filename = `${activeReport}_report_${new Date().toISOString().split("T")[0]}.pdf`;
+		}
+
+		// Save the PDF
+		doc.save(filename);
 	};
 
 	const handlePrint = () => {
