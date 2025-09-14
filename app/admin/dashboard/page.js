@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { BookIcon, HandGrab, List, Menu, UserIcon, X } from "lucide-react";
+import { BookIcon, HandGrab, List, Menu, UserIcon, X, Search } from "lucide-react";
+import QuickSearchBox from "@/components/QuickSearchBox";
 
 export default function AdminDashboard() {
 	const [stats, setStats] = useState({
@@ -65,7 +66,7 @@ export default function AdminDashboard() {
 			{/* Main Content */}
 			<div className="flex-1 p-6">
 				{/* Header */}
-				<header className="flex items-center justify-between mb-8">
+				<header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
 					<div className="flex items-center space-x-4">
 						<button className="md:hidden" onClick={() => setSidebarOpen(true)}>
 							<Menu className="w-7 h-7" />
@@ -73,8 +74,7 @@ export default function AdminDashboard() {
 						<h1 className="text-3xl font-bold">Admin Dashboard</h1>
 					</div>
 					<div className="flex items-center space-x-4">
-						<input type="text" placeholder="Search..." className="hidden md:block px-4 py-2 border rounded-lg" />
-						<div className="w-10 h-10 rounded-full bg-gray-300"></div>
+						<QuickSearchBox placeholder="Search users or books..." className="w-full sm:w-80" />
 					</div>
 				</header>
 

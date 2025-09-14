@@ -5,47 +5,84 @@ import prisma from "@/lib/prisma";
 // 	return new Response(JSON.stringify(books));
 // }
 
-export async function GET() {
-	const books = await prisma.book.findMany({
-		select: {
-			id: true,
-			title: true,
-			author: true,
-			isbn: true,
-			copies: true,
-			available: true, // include available field
-			coverUrl: true, // include cover URL
-			transactions: {
-				where: {
-					returned: false, // only count unreturned books
+export async function GET(request) {
+	const { searchParams } = new URL(request.url);
+	const bookId = searchParams.get("id");
+
+	if (bookId) {
+		// Get specific book with transactions
+		const book = await prisma.book.findUnique({
+			where: { id: parseInt(bookId) },
+			include: {
+				transactions: {
+					include: {
+						user: true,
+					},
+					orderBy: {
+						createdAt: "desc",
+					},
 				},
 			},
-		},
-		orderBy: {
-			title: "asc",
-		},
-	});
+		});
 
-	// Calculate available copies for each book and return complete book data
-	const booksWithAvailable = books.map((book) => {
-		const borrowedCount = book.transactions.length;
-		const availableCopies = book.copies - borrowedCount;
+		if (!book) {
+			return new Response(JSON.stringify({ error: "Book not found" }), { status: 404 });
+		}
 
-		return {
-			id: book.id,
-			title: book.title,
-			author: book.author,
-			isbn: book.isbn,
-			copies: book.copies, // Return the actual copies count
-			available: book.available && availableCopies > 0, // Book is available if flagged as available AND has copies
-			availableCopies: `${availableCopies} of ${book.copies} available`,
-			coverUrl: book.coverUrl,
-		};
-	});
+		// Calculate availability
+		const activeTransactions = book.transactions.filter((t) => !t.returned);
+		const availableCopies = book.copies - activeTransactions.length;
 
-	return new Response(JSON.stringify(booksWithAvailable), {
-		headers: { "Content-Type": "application/json" },
-	});
+		return new Response(
+			JSON.stringify({
+				...book,
+				availableCopies,
+				activeTransactions,
+			})
+		);
+	} else {
+		// Get all books
+		const books = await prisma.book.findMany({
+			select: {
+				id: true,
+				title: true,
+				author: true,
+				isbn: true,
+				copies: true,
+				available: true, // include available field
+				coverUrl: true, // include cover URL
+				transactions: {
+					where: {
+						returned: false, // only count unreturned books
+					},
+				},
+			},
+			orderBy: {
+				title: "asc",
+			},
+		});
+
+		// Calculate available copies for each book and return complete book data
+		const booksWithAvailable = books.map((book) => {
+			const borrowedCount = book.transactions.length;
+			const availableCopies = book.copies - borrowedCount;
+
+			return {
+				id: book.id,
+				title: book.title,
+				author: book.author,
+				isbn: book.isbn,
+				copies: book.copies, // Return the actual copies count
+				available: book.available && availableCopies > 0, // Book is available if flagged as available AND has copies
+				availableCopies: `${availableCopies} of ${book.copies} available`,
+				coverUrl: book.coverUrl,
+			};
+		});
+
+		return new Response(JSON.stringify(booksWithAvailable), {
+			headers: { "Content-Type": "application/json" },
+		});
+	}
 }
 
 export async function POST(req) {

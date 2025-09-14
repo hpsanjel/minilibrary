@@ -57,12 +57,35 @@ export async function POST(req) {
 	}
 }
 
-export async function GET() {
-	const transactions = await prisma.transaction.findMany({
-		include: { user: true, book: true },
-		orderBy: { createdAt: "desc" },
-	});
-	return new Response(JSON.stringify(transactions));
+export async function GET(request) {
+	const { searchParams } = new URL(request.url);
+	const userId = searchParams.get("userId");
+	const bookId = searchParams.get("bookId");
+
+	if (userId) {
+		// Get transactions for specific user
+		const transactions = await prisma.transaction.findMany({
+			where: { userId: parseInt(userId) },
+			include: { user: true, book: true },
+			orderBy: { createdAt: "desc" },
+		});
+		return new Response(JSON.stringify(transactions));
+	} else if (bookId) {
+		// Get transactions for specific book
+		const transactions = await prisma.transaction.findMany({
+			where: { bookId: parseInt(bookId) },
+			include: { user: true, book: true },
+			orderBy: { createdAt: "desc" },
+		});
+		return new Response(JSON.stringify(transactions));
+	} else {
+		// Get all transactions
+		const transactions = await prisma.transaction.findMany({
+			include: { user: true, book: true },
+			orderBy: { createdAt: "desc" },
+		});
+		return new Response(JSON.stringify(transactions));
+	}
 }
 
 export async function PATCH(req) {

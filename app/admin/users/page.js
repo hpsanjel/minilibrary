@@ -2,14 +2,22 @@
 import ConfirmationModal from "@/components/ConfirmationModal";
 import UserDeletionModal from "@/components/UserDeletionModal";
 import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { ArrowLeft, User, Mail, Phone, MapPin, CreditCard, BookOpen, Clock, DollarSign, CheckCircle, XCircle, Edit, Trash2, Calendar, AlertTriangle } from "lucide-react";
 
 export default function AdminUsersPage() {
 	const [users, setUsers] = useState([]);
+	const [selectedUser, setSelectedUser] = useState(null);
+	const [userTransactions, setUserTransactions] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [showModal, setShowModal] = useState(false);
 	const [modalMode, setModalMode] = useState("edit"); // "edit" or "add"
 	const [form, setForm] = useState({ id: null, name: "", email: "", password: "", phone: "", city: "", postalCode: "", address: "", role: "STUDENT" });
 	const [verifyingUsers, setVerifyingUsers] = useState(new Set()); // Track users being verified
+
+	const searchParams = useSearchParams();
+	const router = useRouter();
+	const userId = searchParams.get("id");
 
 	const [isUserDeletionModalOpen, setIsUserDeletionModalOpen] = useState(false);
 	const [selectedUserForDeletion, setSelectedUserForDeletion] = useState(null);
@@ -34,7 +42,13 @@ export default function AdminUsersPage() {
 			if (response.ok) {
 				setIsUserDeletionModalOpen(false);
 				setSelectedUserForDeletion(null);
-				fetchUsers(); // refresh list
+
+				// If we're on a detail page and deleting that user, redirect to list
+				if (userId && selectedUserForDeletion.id.toString() === userId) {
+					router.push("/admin/users");
+				} else {
+					fetchUsers(); // refresh list
+				}
 			} else {
 				console.error("Failed to delete user:", result.error);
 				alert(result.error || "Failed to delete user");
@@ -53,9 +67,33 @@ export default function AdminUsersPage() {
 		setLoading(false);
 	};
 
+	const fetchUserDetails = async (id) => {
+		setLoading(true);
+		try {
+			// Fetch user details
+			const userRes = await fetch(`/api/users?id=${id}`);
+			const userData = await userRes.json();
+
+			// Fetch user transactions
+			const transRes = await fetch(`/api/transactions?userId=${id}`);
+			const transData = await transRes.json();
+
+			setSelectedUser(userData);
+			setUserTransactions(transData);
+		} catch (error) {
+			console.error("Error fetching user details:", error);
+		} finally {
+			setLoading(false);
+		}
+	};
+
 	useEffect(() => {
-		fetchUsers();
-	}, []);
+		if (userId) {
+			fetchUserDetails(userId);
+		} else {
+			fetchUsers();
+		}
+	}, [userId]);
 
 	const openEditModal = (user) => {
 		setForm({ ...user });
@@ -98,7 +136,7 @@ export default function AdminUsersPage() {
 			}
 		} else {
 			// Edit existing user
-			await fetch("/api/users", {
+			const response = await fetch("/api/users", {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
@@ -112,8 +150,19 @@ export default function AdminUsersPage() {
 					verifiedUser: form.verifiedUser,
 				}),
 			});
-			setShowModal(false);
-			fetchUsers();
+
+			if (response.ok) {
+				setShowModal(false);
+				// If we're on a detail page, refresh the detail view
+				if (userId) {
+					fetchUserDetails(userId);
+				} else {
+					fetchUsers();
+				}
+			} else {
+				const error = await response.json();
+				alert(error.error || "Failed to update user");
+			}
 		}
 	};
 
@@ -153,91 +202,102 @@ export default function AdminUsersPage() {
 
 	return (
 		<div className="p-6">
-			<div className="flex items-center justify-between mb-6">
-				<h1 className="text-2xl font-bold">Users</h1>
-				<button onClick={openAddModal} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex items-center gap-2">
-					<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-					</svg>
-					Add New User
-				</button>
-			</div>
-			<div className="overflow-x-auto rounded-lg shadow border bg-white">
-				<table className="min-w-full divide-y divide-gray-200">
-					<thead className="bg-gray-50">
-						<tr>
-							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membership #</th>
-							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-							{/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
+			{userId && selectedUser ? (
+				// Detailed User View
+				<UserDetailView user={selectedUser} transactions={userTransactions} loading={loading} onBack={() => router.push("/admin/users")} onEdit={() => openEditModal(selectedUser)} onDelete={() => openDeleteModal(selectedUser)} />
+			) : (
+				// Users List View
+				<>
+					<div className="flex items-center justify-between mb-6">
+						<h1 className="text-2xl font-bold">Users</h1>
+						<button onClick={openAddModal} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex items-center gap-2">
+							<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+							</svg>
+							Add New User
+						</button>
+					</div>
+					<div className="overflow-x-auto rounded-lg shadow border bg-white">
+						<table className="min-w-full divide-y divide-gray-200">
+							<thead className="bg-gray-50">
+								<tr>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membership #</th>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+									{/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Postal Code</th>
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th> */}
-							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Verified</th>
-							<th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-						</tr>
-					</thead>
-					<tbody className="bg-white divide-y divide-gray-200">
-						{loading ? (
-							<tr>
-								<td colSpan={7} className="text-center py-8 text-gray-400">
-									Loading...
-								</td>
-							</tr>
-						) : users.length === 0 ? (
-							<tr>
-								<td colSpan={7} className="text-center py-8 text-gray-400">
-									No users found.
-								</td>
-							</tr>
-						) : (
-							users.map((user) => (
-								<tr key={user.id} className="hover:bg-gray-50">
-									<td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-blue-600 font-semibold">{user.membershipNumber || "-"}</td>
-									<td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">{user.name || "-"}</td>
-									<td className="px-6 py-4 whitespace-nowrap text-sm">{user.email}</td>
-									<td className="px-6 py-4 whitespace-nowrap text-sm">{user.phone || "-"}</td>
-									{/* <td className="px-6 py-4 whitespace-nowrap text-sm">{user.city || "-"}</td>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Verified</th>
+									<th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+								</tr>
+							</thead>
+							<tbody className="bg-white divide-y divide-gray-200">
+								{loading ? (
+									<tr>
+										<td colSpan={7} className="text-center py-8 text-gray-400">
+											Loading...
+										</td>
+									</tr>
+								) : users.length === 0 ? (
+									<tr>
+										<td colSpan={7} className="text-center py-8 text-gray-400">
+											No users found.
+										</td>
+									</tr>
+								) : (
+									users.map((user) => (
+										<tr key={user.id} className="hover:bg-gray-50">
+											<td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-blue-600 font-semibold">{user.membershipNumber || "-"}</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">{user.name || "-"}</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm">{user.email}</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm">{user.phone || "-"}</td>
+											{/* <td className="px-6 py-4 whitespace-nowrap text-sm">{user.city || "-"}</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">{user.postalCode || "-"}</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">{user.address || "-"}</td> */}
-									<td className="px-6 py-4 whitespace-nowrap text-sm">
-										<span className={`px-2 py-1 rounded text-xs font-medium ${user.role === "ADMIN" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>{user.role}</span>
-									</td>
-									<td className="px-6 py-4 whitespace-nowrap text-sm">
-										<span className={`px-2 py-1 rounded text-xs font-medium ${user.verifiedUser === "Yes" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{user.verifiedUser}</span>
-									</td>
-									<td className="px-6 py-4 whitespace-nowrap text-center text-sm flex gap-2">
-										<button onClick={() => openEditModal(user)} className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded shadow text-xs">
-											Edit
-										</button>
-										<button onClick={() => openDeleteModal(user)} className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded shadow text-xs">
-											Delete
-										</button>
-										{user.verifiedUser !== "Yes" && (
-											<button onClick={() => handleVerify(user.id)} disabled={verifyingUsers.has(user.id)} className={`px-3 py-1 rounded shadow text-xs flex items-center gap-1 ${verifyingUsers.has(user.id) ? "bg-gray-400 text-white cursor-not-allowed" : "bg-green-500 hover:bg-green-600 text-white"}`}>
-												{verifyingUsers.has(user.id) ? (
-													<>
-														<svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
-															<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-															<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-														</svg>
-														Verifying...
-													</>
-												) : (
-													"Verify"
+											<td className="px-6 py-4 whitespace-nowrap text-sm">
+												<span className={`px-2 py-1 rounded text-xs font-medium ${user.role === "ADMIN" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>{user.role}</span>
+											</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm">
+												<span className={`px-2 py-1 rounded text-xs font-medium ${user.verifiedUser === "Yes" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{user.verifiedUser}</span>
+											</td>
+											<td className="px-6 py-4 whitespace-nowrap text-center text-sm flex gap-2">
+												<button onClick={() => openEditModal(user)} className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded shadow text-xs">
+													Edit
+												</button>
+												<button onClick={() => openDeleteModal(user)} className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded shadow text-xs">
+													Delete
+												</button>
+												{user.verifiedUser !== "Yes" && (
+													<button onClick={() => handleVerify(user.id)} disabled={verifyingUsers.has(user.id)} className={`px-3 py-1 rounded shadow text-xs flex items-center gap-1 ${verifyingUsers.has(user.id) ? "bg-gray-400 text-white cursor-not-allowed" : "bg-green-500 hover:bg-green-600 text-white"}`}>
+														{verifyingUsers.has(user.id) ? (
+															<>
+																<svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+																	<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+																	<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+																</svg>
+																Verifying...
+															</>
+														) : (
+															"Verify"
+														)}
+													</button>
 												)}
-											</button>
-										)}
-									</td>
-								</tr>
-							))
-						)}
-					</tbody>
-				</table>
-			</div>
+											</td>
+										</tr>
+									))
+								)}
+							</tbody>
+						</table>
+					</div>
 
-			{/* Modal for Add/Edit User */}
+					{/* User Deletion Modal */}
+					<UserDeletionModal isOpen={isUserDeletionModalOpen} onClose={() => setIsUserDeletionModalOpen(false)} onConfirm={handleDelete} user={selectedUserForDeletion} />
+				</>
+			)}
+
+			{/* Modal for Add/Edit User - Always available */}
 			{showModal && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
 					<div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
@@ -279,8 +339,197 @@ export default function AdminUsersPage() {
 				</div>
 			)}
 
-			{/* User Deletion Modal */}
+			{/* User Deletion Modal - Always available */}
 			<UserDeletionModal isOpen={isUserDeletionModalOpen} onClose={() => setIsUserDeletionModalOpen(false)} onConfirm={handleDelete} user={selectedUserForDeletion} />
+		</div>
+	);
+}
+
+// User Detail View Component
+function UserDetailView({ user, transactions, loading, onBack, onEdit, onDelete }) {
+	if (loading) {
+		return (
+			<div className="flex items-center justify-center h-64">
+				<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+			</div>
+		);
+	}
+
+	const activeTransactions = transactions.filter((t) => !t.returned);
+	const completedTransactions = transactions.filter((t) => t.returned);
+	const totalFines = transactions.reduce((sum, t) => sum + (t.fine || 0), 0);
+	const overduebooks = activeTransactions.filter((t) => t.deadline && new Date(t.deadline) < new Date());
+
+	return (
+		<div className="max-w-6xl mx-auto">
+			{/* Header */}
+			<div className="flex items-center justify-between mb-6">
+				<div className="flex items-center gap-4">
+					<button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+						<ArrowLeft className="w-5 h-5" />
+					</button>
+					<h1 className="text-3xl font-bold text-gray-900">User Details</h1>
+				</div>
+				<div className="flex gap-3">
+					<button onClick={onEdit} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+						<Edit className="w-4 h-4" />
+						Edit User
+					</button>
+					<button onClick={onDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2">
+						<Trash2 className="w-4 h-4" />
+						Delete User
+					</button>
+				</div>
+			</div>
+
+			{/* User Info Card */}
+			<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+				<div className="flex items-start gap-6">
+					<div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+						<User className="w-10 h-10 text-blue-600" />
+					</div>
+					<div className="flex-1">
+						<div className="flex items-center gap-4 mb-4">
+							<h2 className="text-2xl font-bold text-gray-900">{user.name}</h2>
+							<span className={`px-3 py-1 rounded-full text-sm font-medium ${user.verifiedUser === "Yes" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>{user.verifiedUser === "Yes" ? "Verified" : "Pending Verification"}</span>
+							<span className={`px-3 py-1 rounded-full text-sm font-medium ${user.role === "ADMIN" ? "bg-purple-100 text-purple-800" : "bg-blue-100 text-blue-800"}`}>{user.role}</span>
+						</div>
+
+						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+							<div className="flex items-center gap-2">
+								<CreditCard className="w-4 h-4 text-gray-500" />
+								<span className="text-sm text-gray-600">Membership:</span>
+								<span className="font-mono text-sm">{user.membershipNumber || "Not assigned"}</span>
+							</div>
+							<div className="flex items-center gap-2">
+								<Mail className="w-4 h-4 text-gray-500" />
+								<span className="text-sm text-gray-600">Email:</span>
+								<span className="text-sm">{user.email}</span>
+							</div>
+							{user.phone && (
+								<div className="flex items-center gap-2">
+									<Phone className="w-4 h-4 text-gray-500" />
+									<span className="text-sm text-gray-600">Phone:</span>
+									<span className="text-sm">{user.phone}</span>
+								</div>
+							)}
+							{user.city && (
+								<div className="flex items-center gap-2">
+									<MapPin className="w-4 h-4 text-gray-500" />
+									<span className="text-sm text-gray-600">City:</span>
+									<span className="text-sm">{user.city}</span>
+								</div>
+							)}
+							{user.postalCode && (
+								<div className="flex items-center gap-2">
+									<MapPin className="w-4 h-4 text-gray-500" />
+									<span className="text-sm text-gray-600">Postal Code:</span>
+									<span className="text-sm">{user.postalCode}</span>
+								</div>
+							)}
+							{user.address && (
+								<div className="flex items-center gap-2 col-span-full">
+									<MapPin className="w-4 h-4 text-gray-500" />
+									<span className="text-sm text-gray-600">Address:</span>
+									<span className="text-sm">{user.address}</span>
+								</div>
+							)}
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* Statistics Cards */}
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+				<StatCard title="Currently Borrowed" value={activeTransactions.length} icon={<BookOpen className="w-6 h-6" />} color="from-blue-400 to-blue-600" />
+				<StatCard title="Total Borrowed" value={transactions.length} icon={<BookOpen className="w-6 h-6" />} color="from-green-400 to-green-600" />
+				<StatCard title="Overdue Books" value={overduebooks.length} icon={<AlertTriangle className="w-6 h-6" />} color="from-red-400 to-red-600" />
+				<StatCard title="Total Fines" value={`$${(totalFines / 100).toFixed(2)}`} icon={<DollarSign className="w-6 h-6" />} color="from-orange-400 to-orange-600" />
+			</div>
+
+			{/* Current Borrowings */}
+			{activeTransactions.length > 0 && (
+				<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+					<h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+						<BookOpen className="w-5 h-5" />
+						Currently Borrowed Books
+					</h3>
+					<div className="space-y-4">
+						{activeTransactions.map((transaction) => (
+							<TransactionCard key={transaction.id} transaction={transaction} isActive={true} />
+						))}
+					</div>
+				</div>
+			)}
+
+			{/* Transaction History */}
+			{completedTransactions.length > 0 && (
+				<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+					<h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+						<Clock className="w-5 h-5" />
+						Transaction History
+					</h3>
+					<div className="space-y-4">
+						{completedTransactions.slice(0, 10).map((transaction) => (
+							<TransactionCard key={transaction.id} transaction={transaction} isActive={false} />
+						))}
+						{completedTransactions.length > 10 && <div className="text-center text-gray-500 text-sm">And {completedTransactions.length - 10} more transactions...</div>}
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
+// Statistics Card Component
+function StatCard({ title, value, icon, color }) {
+	return (
+		<div className={`bg-gradient-to-r ${color} rounded-xl shadow p-6 text-white`}>
+			<div className="flex items-center justify-between">
+				<div>
+					<p className="text-sm opacity-80">{title}</p>
+					<p className="text-2xl font-bold">{value}</p>
+				</div>
+				<div className="bg-white bg-opacity-20 rounded-full p-3">{icon}</div>
+			</div>
+		</div>
+	);
+}
+
+// Transaction Card Component
+function TransactionCard({ transaction, isActive }) {
+	const isOverdue = isActive && transaction.deadline && new Date(transaction.deadline) < new Date();
+
+	return (
+		<div className={`border rounded-lg p-4 ${isOverdue ? "border-red-200 bg-red-50" : "border-gray-200 bg-gray-50"}`}>
+			<div className="flex items-center justify-between">
+				<div className="flex-1">
+					<h4 className="font-medium text-gray-900">{transaction.book.title}</h4>
+					<p className="text-sm text-gray-600">by {transaction.book.author}</p>
+					{transaction.book.isbn && <p className="text-xs text-gray-500 font-mono">ISBN: {transaction.book.isbn}</p>}
+				</div>
+				<div className="text-right">
+					<div className="flex items-center gap-2 mb-1">
+						{isActive ? (
+							<span className="flex items-center gap-1 text-sm text-blue-600">
+								<BookOpen className="w-4 h-4" />
+								Currently Borrowed
+							</span>
+						) : (
+							<span className="flex items-center gap-1 text-sm text-green-600">
+								<CheckCircle className="w-4 h-4" />
+								Returned
+							</span>
+						)}
+					</div>
+					<div className="text-xs text-gray-500">
+						<div>Borrowed: {new Date(transaction.createdAt).toLocaleDateString()}</div>
+						{transaction.deadline && <div className={isOverdue ? "text-red-600 font-medium" : ""}>Due: {new Date(transaction.deadline).toLocaleDateString()}</div>}
+						{transaction.returnedAt && <div>Returned: {new Date(transaction.returnedAt).toLocaleDateString()}</div>}
+						{transaction.fine > 0 && <div className="text-red-600 font-medium">Fine: ${(transaction.fine / 100).toFixed(2)}</div>}
+					</div>
+				</div>
+			</div>
 		</div>
 	);
 }

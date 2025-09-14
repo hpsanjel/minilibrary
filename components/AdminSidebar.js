@@ -10,6 +10,7 @@ export default function AdminSidebar() {
 			<div className="p-6 text-2xl font-bold border-b cursor-pointer" onClick={() => router.push("/admin/dashboard")}>
 				📚 Dashboard
 			</div>
+
 			<nav className="flex-1 p-4 space-y-3">
 				<button onClick={() => router.push("/admin/books")} className="w-full text-left p-3 rounded-lg hover:bg-gray-100 flex items-center gap-2 cursor-pointer">
 					<Book className="w-5 h-5" /> Books

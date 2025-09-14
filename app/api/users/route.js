@@ -3,23 +3,55 @@ import bcrypt from "bcrypt";
 import { sendVerificationSuccessEmail } from "@/lib/sendVerificationSuccessEmail";
 import { generateMembershipNumber } from "@/lib/membershipUtils";
 
-// Get all users
-export async function GET() {
-	const users = await prisma.user.findMany({
-		select: {
-			id: true,
-			membershipNumber: true,
-			name: true,
-			email: true,
-			phone: true,
-			city: true,
-			postalCode: true,
-			address: true,
-			role: true,
-			verifiedUser: true,
-		},
-	});
-	return new Response(JSON.stringify(users));
+// Get all users or specific user by ID
+export async function GET(request) {
+	const { searchParams } = new URL(request.url);
+	const userId = searchParams.get("id");
+
+	if (userId) {
+		// Get specific user with transactions
+		const user = await prisma.user.findUnique({
+			where: { id: parseInt(userId) },
+			select: {
+				id: true,
+				membershipNumber: true,
+				name: true,
+				email: true,
+				phone: true,
+				city: true,
+				postalCode: true,
+				address: true,
+				role: true,
+				verifiedUser: true,
+				transactions: {
+					include: {
+						book: true,
+					},
+					orderBy: {
+						createdAt: "desc",
+					},
+				},
+			},
+		});
+		return new Response(JSON.stringify(user));
+	} else {
+		// Get all users
+		const users = await prisma.user.findMany({
+			select: {
+				id: true,
+				membershipNumber: true,
+				name: true,
+				email: true,
+				phone: true,
+				city: true,
+				postalCode: true,
+				address: true,
+				role: true,
+				verifiedUser: true,
+			},
+		});
+		return new Response(JSON.stringify(users));
+	}
 }
 
 // Create a new user
