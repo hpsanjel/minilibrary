@@ -159,8 +159,14 @@ function UserCard({ user }) {
 				{/* User Header */}
 				<div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
 					<div className="flex items-start gap-4">
-						<div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-							<User className="w-6 h-6 text-blue-600" />
+						<div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+							{user.photo ? (
+								<img src={user.photo} alt={`${user.name}'s profile`} className="w-full h-full object-cover" />
+							) : (
+								<div className="w-full h-full bg-blue-100 rounded-full flex items-center justify-center">
+									<User className="w-6 h-6 text-blue-600" />
+								</div>
+							)}
 						</div>
 						<div className="flex-1 min-w-0">
 							<h3 className="text-lg font-semibold text-gray-900 truncate">{user.name}</h3>
@@ -285,10 +291,21 @@ function BookCard({ book }) {
 								const transaction = book.activeTransactions.find((trans) => trans.user.id === user.id);
 								return (
 									<div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-										<div className="flex-1 min-w-0">
-											<div className="font-medium text-gray-900">{user.name}</div>
-											<div className="text-sm text-gray-600">
-												{user.email} • {user.membershipNumber || "N/A"}
+										<div className="flex items-center gap-3 flex-1 min-w-0">
+											<div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+												{user.photo ? (
+													<img src={user.photo} alt={`${user.name}'s profile`} className="w-full h-full object-cover" />
+												) : (
+													<div className="w-full h-full bg-blue-100 rounded-full flex items-center justify-center">
+														<User className="w-4 h-4 text-blue-600" />
+													</div>
+												)}
+											</div>
+											<div className="flex-1 min-w-0">
+												<div className="font-medium text-gray-900">{user.name}</div>
+												<div className="text-sm text-gray-600">
+													{user.email} • {user.membershipNumber || "N/A"}
+												</div>
 											</div>
 										</div>
 										<div className="text-right">

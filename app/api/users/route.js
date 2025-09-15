@@ -108,6 +108,7 @@ export async function POST(req) {
 // Update user (name, contact, role)
 export async function PATCH(req) {
 	const { id, name, phone, city, postalCode, address, photo, role, verifiedUser, resetPassword } = await req.json();
+
 	const data = { name, phone, city, postalCode, address, role };
 	if (photo !== undefined) data.photo = photo;
 	if (verifiedUser !== undefined) data.verifiedUser = verifiedUser;

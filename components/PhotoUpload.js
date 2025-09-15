@@ -99,6 +99,9 @@ export default function PhotoUpload({ photo, setPhoto, disabled = false }) {
 		<div>
 			<label className="block mb-2 text-gray-700">Profile Photo (Optional)</label>
 
+			{/* Hidden file input - always present */}
+			<input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+
 			{!photo && !showCamera && (
 				<div className="space-y-3">
 					<div className="flex gap-2">
@@ -116,7 +119,6 @@ export default function PhotoUpload({ photo, setPhoto, disabled = false }) {
 							Camera
 						</button>
 					</div>
-					<input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
 				</div>
 			)}
 

@@ -6,14 +6,6 @@ import { useState, useRef, useEffect } from "react";
 
 export default function Navbar() {
 	const { data: session } = useSession();
-
-	// Debug: log the session and user role
-	useEffect(() => {
-		if (session) {
-			console.log("[Navbar] session.user.role:", session.user?.role);
-			console.log("[Navbar] session:", session);
-		}
-	}, [session]);
 	const [open, setOpen] = useState(false);
 	const dropdownRef = useRef(null);
 
@@ -57,7 +49,13 @@ export default function Navbar() {
 										<div className="font-semibold text-lg">{session.user.name || "User"}</div>
 										<div className="text-sm text-gray-600">{session.user.email}</div>
 									</div>
-									<button onClick={() => signOut({ callbackUrl: "/auth/signin" })} className="w-full text-left px-4 py-3 hover:bg-gray-100 text-red-600 font-semibold rounded-b-lg transition">
+									<button
+										onClick={() => {
+											setOpen(false);
+											signOut({ callbackUrl: "/auth/signin" });
+										}}
+										className="w-full text-left px-4 py-3 hover:bg-gray-100 text-red-600 font-semibold rounded-b-lg transition"
+									>
 										Logout
 									</button>
 								</div>

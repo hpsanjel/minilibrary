@@ -256,15 +256,8 @@ export default function AuthForm() {
 					setShowResendVerification(false);
 				}
 			} else {
-				// Sign-in successful, redirect appropriately
-				if (callbackUrl) {
-					// Redirect to the original page user was trying to access
-					router.replace(callbackUrl);
-				} else {
-					// Default redirect - will be handled by the useEffect above when session updates
-					// This is a fallback, the main redirect logic is in useEffect
-					router.replace("/books");
-				}
+				// Sign-in successful, redirect is handled by useEffect above when session updates
+				// Don't redirect here to avoid conflicts with useEffect
 			}
 		}
 	};

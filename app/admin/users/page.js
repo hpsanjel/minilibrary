@@ -98,7 +98,10 @@ export default function AdminUsersPage() {
 	}, [userId]);
 
 	const openEditModal = (user) => {
-		setForm({ ...user });
+		setForm({
+			...user,
+			photo: user.photo || "", // Ensure photo is always a string
+		});
 		setModalMode("edit");
 		setShowModal(true);
 	};
@@ -165,6 +168,7 @@ export default function AdminUsersPage() {
 				}
 			} else {
 				const error = await response.json();
+				console.error("Failed to update user:", error);
 				alert(error.error || "Failed to update user");
 			}
 		}

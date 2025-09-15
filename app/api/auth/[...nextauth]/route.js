@@ -44,12 +44,15 @@ export const authOptions = {
 				token.role = user.role;
 				token.membershipNumber = user.membershipNumber;
 				token.photo = user.photo;
+				token.lastUpdate = Date.now();
+				console.log("JWT: New sign-in for user:", user.email, "role:", user.role);
 			}
 
-			// Refresh user data every hour or if no photo in token
-			const shouldRefresh = !token.photo || Date.now() - (token.lastUpdate || 0) > 60 * 60 * 1000;
+			// Only refresh if we have valid token data and enough time has passed
+			const shouldRefresh = token.id && Date.now() - (token.lastUpdate || 0) > 60 * 60 * 1000;
 
-			if (shouldRefresh && token.id) {
+			if (shouldRefresh) {
+				console.log("JWT: Refreshing token for user ID:", token.id);
 				try {
 					const freshUser = await prisma.user.findUnique({
 						where: { id: parseInt(token.id) },
@@ -61,9 +64,13 @@ export const authOptions = {
 						token.role = freshUser.role;
 						token.membershipNumber = freshUser.membershipNumber;
 						token.lastUpdate = Date.now();
+						console.log("JWT: Token refreshed for user:", freshUser.email, "role:", freshUser.role);
+					} else {
+						console.log("JWT: User not found during refresh for ID:", token.id);
 					}
 				} catch (error) {
 					console.error("Error refreshing user data in JWT callback:", error);
+					// Don't fail the callback, just skip the refresh
 				}
 			}
 
@@ -74,6 +81,7 @@ export const authOptions = {
 			if (token?.role) session.user.role = token.role;
 			if (token?.membershipNumber) session.user.membershipNumber = token.membershipNumber;
 			if (token?.photo) session.user.photo = token.photo;
+			console.log("Session callback - user role:", session.user.role, "email:", session.user.email);
 			return session;
 		},
 	},

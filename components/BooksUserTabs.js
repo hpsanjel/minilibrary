@@ -29,12 +29,21 @@ export default function BooksUserTabs() {
 	});
 
 	useEffect(() => {
-		if (!session) return;
+		if (!session || !session.user.id) return;
+		console.log("BooksUserTabs: session:", session);
+		console.log("BooksUserTabs: session.user.id:", session.user.id);
+		console.log("BooksUserTabs: session.user.role:", session.user.role);
 		setLoading(true);
-		fetch("/api/transactions")
+		// Fetch only transactions for this specific user
+		fetch(`/api/transactions?userId=${session.user.id}`)
 			.then((res) => res.json())
 			.then((data) => {
-				setTransactions(data.filter((t) => t.userId === session.user.id));
+				console.log("BooksUserTabs: user transactions:", data);
+				setTransactions(data);
+				setLoading(false);
+			})
+			.catch((error) => {
+				console.error("BooksUserTabs: Error fetching transactions:", error);
 				setLoading(false);
 			});
 	}, [session]);
