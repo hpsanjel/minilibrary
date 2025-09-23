@@ -317,6 +317,13 @@ export default function AuthForm() {
 			<div>
 				<label className="block mb-2 text-gray-700">Password</label>
 				<input type="password" className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required />
+				{!isSignUp && (
+					<div className="text-right mt-1">
+						<a href="/auth/forgot-password" className="text-sm text-blue-600 hover:underline">
+							Forgot password?
+						</a>
+					</div>
+				)}
 			</div>
 			<button type="submit" className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition disabled:opacity-50" disabled={loading}>
 				{loading ? (isSignUp ? "Signing up..." : "Signing in...") : isSignUp ? "Sign Up" : "Sign In"}
