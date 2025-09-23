@@ -1,8 +1,10 @@
-"use client";
-import { useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+export const dynamic = "force-dynamic";
+import { Suspense } from "react";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
+	"use client";
+	const { useState, useEffect } = require("react");
+	const { useSearchParams, useRouter } = require("next/navigation");
 	const searchParams = useSearchParams();
 	const router = useRouter();
 	const token = searchParams.get("token");
@@ -97,5 +99,13 @@ export default function ResetPasswordPage() {
 				{loading ? "Changing..." : "Change Password"}
 			</button>
 		</form>
+	);
+}
+
+export default function ResetPasswordPage() {
+	return (
+		<Suspense fallback={<div className="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow text-center">Loading...</div>}>
+			<ResetPasswordContent />
+		</Suspense>
 	);
 }
