@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { sendBookIssuedEmail } from "@/lib/sendBookIssuedEmail";
 
 // Get all issued books (unreturned transactions)
 export async function GET() {
@@ -128,8 +129,19 @@ export async function POST(req) {
 			});
 		}
 
-		// TODO: Send confirmation email (optional)
-		// await sendBookIssuedEmail({ ... });
+		// Send confirmation email to student
+		try {
+			await sendBookIssuedEmail({
+				to: user.email,
+				userName: user.name || user.email,
+				bookTitle: book.title,
+				bookAuthor: book.author,
+				deadline: deadline.toLocaleString("en-GB", { year: "numeric", month: "short", day: "numeric" }),
+				transactionId: issue.id,
+			});
+		} catch (emailErr) {
+			console.error("Failed to send issue confirmation email", emailErr);
+		}
 
 		return new Response(JSON.stringify(issue), { status: 201 });
 	} catch (error) {

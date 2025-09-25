@@ -276,8 +276,8 @@ export default function AdminUsersPage() {
 									{/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Postal Code</th>
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th> */}
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Verified</th>
+									{/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Verified</th> */}
 									<th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
 								</tr>
 							</thead>
@@ -315,12 +315,12 @@ export default function AdminUsersPage() {
 											{/* <td className="px-6 py-4 whitespace-nowrap text-sm">{user.city || "-"}</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">{user.postalCode || "-"}</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">{user.address || "-"}</td> */}
-											<td className="px-6 py-4 whitespace-nowrap text-sm">
+											{/* <td className="px-6 py-4 whitespace-nowrap text-sm">
 												<span className={`px-2 py-1 rounded text-xs font-medium ${user.role === "ADMIN" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>{user.role}</span>
 											</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm">
 												<span className={`px-2 py-1 rounded text-xs font-medium ${user.verifiedUser === "Yes" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{user.verifiedUser}</span>
-											</td>
+											</td> */}
 											<td className="px-6 py-4 whitespace-nowrap text-center text-sm flex gap-2">
 												<button onClick={() => openEditModal(user)} className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded shadow text-xs">
 													Edit
