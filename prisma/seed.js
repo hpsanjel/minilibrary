@@ -4,9 +4,9 @@ import bcrypt from "bcrypt";
 async function main() {
 	const hash = await bcrypt.hash("admin123", 10);
 	await prisma.user.upsert({
-		where: { email: "admin@library.com" },
+		where: { email: "hari.junkemails@gmail.com" },
 		update: {},
-		create: { email: "admin@library.com", password: hash, role: "ADMIN", name: "Admin" },
+		create: { email: "hari.junkemails@gmail.com", password: hash, role: "ADMIN", name: "Admin" },
 	});
 
 	await prisma.book.createMany({

@@ -7,36 +7,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id                       Int           @id @default(autoincrement())
-  membershipNumber         String?       @unique
-  name                     String?
-  email                    String        @unique
-  password                 String
-  phone                    String?
-  city                     String?
-  postalCode               String?
-  address                  String?
-  photo                    String?       // Base64 encoded photo
-  role                     Role          @default(STUDENT)
-  verifiedUser             String        @default("No")
-  verificationToken        String?
-  verificationTokenExpires DateTime?     @db.Timestamp(6)
-  passwordResetToken       String?
-  passwordResetTokenExpires DateTime?    @db.Timestamp(6)
-  transactions             Transaction[]
-  finePayments             FinePayment[]
+model Book {
+  id          Int           @id @default(autoincrement())
+  title       String
+  author      String
+  isbn        String?
+  copies      Int           @default(1)
+  available   Boolean       @default(true)
+  coverUrl    String?
+  Transaction Transaction[]
 }
 
-model Book {
-  id           Int           @id @default(autoincrement())
-  title        String
-  author       String
-  isbn         String?
-  copies       Int           @default(1)
-  available    Boolean       @default(true)
-  coverUrl     String?
-  transactions Transaction[]
+model FinePayment {
+  id            Int         @id @default(autoincrement())
+  transactionId Int
+  userId        Int
+  amount        Int
+  paidAt        DateTime    @default(now()) @db.Timestamp(6)
+  processedBy   String?
+  notes         String?
+  Transaction   Transaction @relation(fields: [transactionId], references: [id])
+  User          User        @relation(fields: [userId], references: [id])
 }
 
 model Transaction {
@@ -50,21 +41,30 @@ model Transaction {
   condition   String?
   returnNotes String?
   returnedAt  DateTime?     @db.Timestamp(6)
-  book        Book          @relation(fields: [bookId], references: [id])
-  user        User          @relation(fields: [userId], references: [id])
-  finePayments FinePayment[]
+  FinePayment FinePayment[]
+  Book        Book          @relation(fields: [bookId], references: [id])
+  User        User          @relation(fields: [userId], references: [id])
 }
 
-model FinePayment {
-  id            Int         @id @default(autoincrement())
-  transactionId Int
-  userId        Int
-  amount        Int         // Amount paid in øre (1 NOK = 100 øre)
-  paidAt        DateTime    @default(now()) @db.Timestamp(6)
-  processedBy   String?     // Admin who processed the payment
-  notes         String?     // Optional payment notes
-  transaction   Transaction @relation(fields: [transactionId], references: [id])
-  user          User        @relation(fields: [userId], references: [id])
+model User {
+  id                        Int           @id @default(autoincrement())
+  membershipNumber          String?       @unique
+  name                      String?
+  email                     String        @unique
+  password                  String
+  phone                     String?
+  city                      String?
+  postalCode                String?
+  address                   String?
+  photo                     String?
+  role                      Role          @default(STUDENT)
+  verifiedUser              String        @default("No")
+  verificationToken         String?
+  verificationTokenExpires  DateTime?     @db.Timestamp(6)
+  passwordResetToken        String?
+  passwordResetTokenExpires DateTime?     @db.Timestamp(6)
+  FinePayment               FinePayment[]
+  Transaction               Transaction[]
 }
 
 enum Role {

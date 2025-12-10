@@ -1,10 +1,12 @@
+"use client";
 export const dynamic = "force-dynamic";
+
 import { Suspense } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 
 function ResetPasswordContent() {
 	"use client";
-	const { useState, useEffect } = require("react");
-	const { useSearchParams, useRouter } = require("next/navigation");
 	const searchParams = useSearchParams();
 	const router = useRouter();
 	const token = searchParams.get("token");

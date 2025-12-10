@@ -33,3 +33,12 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
 	display: none; /* Safari and Chrome */
 }
+
+/* Hide Next.js development logo / dev tools button that injects into the page in dev mode.
+	 Targets the runtime attributes used by Next.js (id/data attributes). This keeps it visible
+	 when you build for production but hides the small dev-only badge while developing. */
+[data-nextjs-dev-tools-button],
+#next-logo,
+[data-next-mark] {
+	display: none !important;
+}

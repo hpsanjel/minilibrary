@@ -16,6 +16,7 @@
 		"html5-qrcode": "^2.3.8",
 		"jspdf": "^3.0.2",
 		"jspdf-autotable": "^5.0.2",
+		"jszip": "^3.10.1",
 		"lucide-react": "^0.542.0",
 		"next": "15.5.0",
 		"next-auth": "^4.24.11",
@@ -33,5 +34,8 @@
 		"eslint-config-next": "15.5.0",
 		"prisma": "^6.15.0",
 		"tailwindcss": "^4.1.12"
+	},
+	"prisma": {
+		"seed": "node prisma/seed.js"
 	}
 }

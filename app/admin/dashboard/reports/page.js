@@ -115,6 +115,62 @@ export default function ReportsPage() {
 		return headerMappings[reportType]?.[key] || key.charAt(0).toUpperCase() + key.slice(1);
 	};
 
+	// Get column order for users report
+	const getUsersColumnOrder = (data) => {
+		if (!data || data.length === 0) return [];
+		const allKeys = Object.keys(data[0]);
+		// Filter out id
+		const filteredKeys = allKeys.filter((key) => key !== "id");
+
+		// Reorder: name, photo, then other fields
+		const orderedKeys = [];
+		if (filteredKeys.includes("name")) orderedKeys.push("name");
+		if (filteredKeys.includes("photo")) orderedKeys.push("photo");
+
+		// Add remaining fields
+		const remainingKeys = filteredKeys.filter((key) => !["name", "photo"].includes(key));
+		const preferredOrder = ["email", "membershipNumber", "role", "phone", "city", "postalCode", "address", "verifiedUser"];
+
+		preferredOrder.forEach((key) => {
+			if (remainingKeys.includes(key)) orderedKeys.push(key);
+		});
+
+		// Add any remaining keys not in preferred order
+		remainingKeys.forEach((key) => {
+			if (!orderedKeys.includes(key)) orderedKeys.push(key);
+		});
+
+		return orderedKeys;
+	};
+
+	// Get column order for books report
+	const getBooksColumnOrder = (data) => {
+		if (!data || data.length === 0) return [];
+		const allKeys = Object.keys(data[0]);
+		// Filter out id and Transaction (last column)
+		const filteredKeys = allKeys.filter((key, index, arr) => key !== "id" && index !== arr.length - 1);
+
+		// Reorder: title, coverUrl, then other fields
+		const orderedKeys = [];
+		if (filteredKeys.includes("title")) orderedKeys.push("title");
+		if (filteredKeys.includes("coverUrl")) orderedKeys.push("coverUrl");
+
+		// Add remaining fields
+		const remainingKeys = filteredKeys.filter((key) => !["title", "coverUrl"].includes(key));
+		const preferredOrder = ["author", "isbn", "copies", "available", "availableCopies"];
+
+		preferredOrder.forEach((key) => {
+			if (remainingKeys.includes(key)) orderedKeys.push(key);
+		});
+
+		// Add any remaining keys not in preferred order
+		remainingKeys.forEach((key) => {
+			if (!orderedKeys.includes(key)) orderedKeys.push(key);
+		});
+
+		return orderedKeys;
+	};
+
 	// Get column order for issues report
 	const getIssuesColumnOrder = (data) => {
 		if (!data || data.length === 0) return [];
@@ -223,6 +279,11 @@ export default function ReportsPage() {
 		// Format fine amounts
 		if (key === "fine") {
 			return val > 0 ? `$${val}` : "-";
+		}
+
+		// Don't display photo as text (it will be rendered as image)
+		if (key === "photo") {
+			return "-";
 		}
 
 		return val ?? "-";
@@ -355,11 +416,14 @@ export default function ReportsPage() {
 				headers = ["S.N.", ...columnOrder.map((key) => getHeaderLabel(key, activeReport))];
 			} else {
 				// For users and books
-				columnOrder = Object.keys(data[0]).filter((key, index, arr) => {
-					if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
-					if (activeReport === "users") return key !== "id";
-					return true;
-				});
+				if (activeReport === "users") {
+					columnOrder = getUsersColumnOrder(data);
+				} else {
+					columnOrder = Object.keys(data[0]).filter((key, index, arr) => {
+						if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
+						return key !== "id";
+					});
+				}
 				headers = ["S.N.", ...columnOrder.map((key) => getHeaderLabel(key, activeReport))];
 			}
 
@@ -487,11 +551,14 @@ export default function ReportsPage() {
 				tableData = data.map((row, index) => [index + 1, ...columnOrder.map((key) => formatCellValue(key, row[key], activeReport))]);
 			} else {
 				// For users and books
-				columnOrder = Object.keys(data[0]).filter((key, index, arr) => {
-					if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
-					if (activeReport === "users") return key !== "id";
-					return true;
-				});
+				if (activeReport === "users") {
+					columnOrder = getUsersColumnOrder(data);
+				} else {
+					columnOrder = Object.keys(data[0]).filter((key, index, arr) => {
+						if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
+						return key !== "id";
+					});
+				}
 				headers = [["S.N.", ...columnOrder.map((key) => getHeaderLabel(key, activeReport))]];
 				tableData = data.map((row, index) => [index + 1, ...columnOrder.map((key) => formatCellValue(key, row[key], activeReport))]);
 			}
@@ -727,16 +794,16 @@ export default function ReportsPage() {
 								{activeReport === "issues"
 									? getIssuesColumnOrder(data).map((key) => <th key={key}>{getHeaderLabel(key, activeReport)}</th>)
 									: activeReport === "returns"
-									? getReturnsColumnOrder(data).map((key) => <th key={key}>{getHeaderLabel(key, activeReport)}</th>)
-									: activeReport === "defaulters"
-									? getDefaultersColumnOrder(data).map((key) => <th key={key}>{getHeaderLabel(key, activeReport)}</th>)
-									: Object.keys(data[0])
-											.filter((key, index, arr) => {
-												if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
-												if (activeReport === "users") return key !== "id";
-												return true;
-											})
-											.map((key) => <th key={key}>{getHeaderLabel(key, activeReport)}</th>)}
+										? getReturnsColumnOrder(data).map((key) => <th key={key}>{getHeaderLabel(key, activeReport)}</th>)
+										: activeReport === "defaulters"
+											? getDefaultersColumnOrder(data).map((key) => <th key={key}>{getHeaderLabel(key, activeReport)}</th>)
+											: Object.keys(data[0])
+												.filter((key, index, arr) => {
+													if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
+													if (activeReport === "users") return key !== "id";
+													return true;
+												})
+												.map((key) => <th key={key}>{getHeaderLabel(key, activeReport)}</th>)}
 							</tr>
 						</thead>
 						<tbody>
@@ -746,16 +813,16 @@ export default function ReportsPage() {
 									{activeReport === "issues"
 										? getIssuesColumnOrder(data).map((key, j) => <td key={j}>{formatCellValue(key, row[key], activeReport)}</td>)
 										: activeReport === "returns"
-										? getReturnsColumnOrder(data).map((key, j) => <td key={j}>{formatCellValue(key, row[key], activeReport)}</td>)
-										: activeReport === "defaulters"
-										? getDefaultersColumnOrder(data).map((key, j) => <td key={j}>{formatCellValue(key, row[key], activeReport)}</td>)
-										: Object.entries(row)
-												.filter(([key, val], index, arr) => {
-													if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
-													if (activeReport === "users") return key !== "id";
-													return true;
-												})
-												.map(([key, val], j) => <td key={j}>{formatCellValue(key, val, activeReport)}</td>)}
+											? getReturnsColumnOrder(data).map((key, j) => <td key={j}>{formatCellValue(key, row[key], activeReport)}</td>)
+											: activeReport === "defaulters"
+												? getDefaultersColumnOrder(data).map((key, j) => <td key={j}>{formatCellValue(key, row[key], activeReport)}</td>)
+												: Object.entries(row)
+													.filter(([key, val], index, arr) => {
+														if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
+														if (activeReport === "users") return key !== "id";
+														return true;
+													})
+													.map(([key, val], j) => <td key={j}>{formatCellValue(key, val, activeReport)}</td>)}
 								</tr>
 							))}
 						</tbody>
@@ -986,33 +1053,41 @@ export default function ReportsPage() {
 									{(activeReport === "users" || activeReport === "books" || activeReport === "issues" || activeReport === "returns" || activeReport === "defaulters") && <th className="p-3 border font-medium text-gray-700">S.N.</th>}
 									{activeReport === "issues"
 										? getIssuesColumnOrder(data).map((key) => (
-												<th key={key} className="p-3 border font-medium text-gray-700">
-													{getHeaderLabel(key, activeReport)}
-												</th>
-										  ))
+											<th key={key} className="p-3 border font-medium text-gray-700">
+												{getHeaderLabel(key, activeReport)}
+											</th>
+										))
 										: activeReport === "returns"
-										? getReturnsColumnOrder(data).map((key) => (
+											? getReturnsColumnOrder(data).map((key) => (
 												<th key={key} className="p-3 border font-medium text-gray-700">
 													{getHeaderLabel(key, activeReport)}
 												</th>
-										  ))
-										: activeReport === "defaulters"
-										? getDefaultersColumnOrder(data).map((key) => (
-												<th key={key} className="p-3 border font-medium text-gray-700">
-													{getHeaderLabel(key, activeReport)}
-												</th>
-										  ))
-										: Object.keys(data[0])
-												.filter((key, index, arr) => {
-													if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
-													if (activeReport === "users") return key !== "id";
-													return true;
-												})
-												.map((key) => (
+											))
+											: activeReport === "defaulters"
+												? getDefaultersColumnOrder(data).map((key) => (
 													<th key={key} className="p-3 border font-medium text-gray-700">
 														{getHeaderLabel(key, activeReport)}
 													</th>
-												))}
+												))
+												: Object.keys(data[0])
+													.filter((key, index, arr) => {
+														if (activeReport === "users") {
+															// Use custom order for users
+															return false; // Will be handled separately
+														}
+														if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
+														return true;
+													})
+													.map((key) => (
+														<th key={key} className="p-3 border font-medium text-gray-700">
+															{getHeaderLabel(key, activeReport)}
+														</th>
+													))}
+									{activeReport === "users" && getUsersColumnOrder(data).map((key) => (
+										<th key={key} className="p-3 border font-medium text-gray-700">
+											{getHeaderLabel(key, activeReport)}
+										</th>
+									))}
 								</tr>
 							</thead>
 							<tbody>
@@ -1021,33 +1096,70 @@ export default function ReportsPage() {
 										{(activeReport === "users" || activeReport === "books" || activeReport === "issues" || activeReport === "returns" || activeReport === "defaulters") && <td className="p-3 border font-medium">{i + 1}</td>}
 										{activeReport === "issues"
 											? getIssuesColumnOrder(data).map((key, j) => (
-													<td key={j} className="p-3 border">
-														{formatCellValue(key, row[key], activeReport)}
-													</td>
-											  ))
+												<td key={j} className="p-3 border">
+													{formatCellValue(key, row[key], activeReport)}
+												</td>
+											))
 											: activeReport === "returns"
-											? getReturnsColumnOrder(data).map((key, j) => (
+												? getReturnsColumnOrder(data).map((key, j) => (
 													<td key={j} className="p-3 border">
 														{formatCellValue(key, row[key], activeReport)}
 													</td>
-											  ))
-											: activeReport === "defaulters"
-											? getDefaultersColumnOrder(data).map((key, j) => (
-													<td key={j} className="p-3 border">
-														{formatCellValue(key, row[key], activeReport)}
-													</td>
-											  ))
-											: Object.entries(row)
-													.filter(([key, val], index, arr) => {
-														if (activeReport === "books") return key !== "id" && index !== arr.length - 1;
-														if (activeReport === "users") return key !== "id";
-														return true;
-													})
-													.map(([key, val], j) => (
+												))
+												: activeReport === "defaulters"
+													? getDefaultersColumnOrder(data).map((key, j) => (
 														<td key={j} className="p-3 border">
-															{formatCellValue(key, val, activeReport)}
+															{formatCellValue(key, row[key], activeReport)}
 														</td>
-													))}
+													))
+													: activeReport === "users"
+														? getUsersColumnOrder(data).map((key, j) => (
+															<td key={j} className={`p-3 border ${key === "photo" ? "text-center" : "whitespace-nowrap"}`}>
+																{key === "photo" && row[key] ? (
+																	<div className="flex justify-center">
+																		<img
+																			src={row[key]}
+																			alt="User photo"
+																			className="w-12 h-12 object-cover rounded-full border-2 border-gray-300"
+																		/>
+																	</div>
+																) : key === "photo" ? (
+																	<div className="flex justify-center">
+																		<div className="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-sm border-2 border-gray-300">
+																			{row.name ? row.name.charAt(0).toUpperCase() : row.email.charAt(0).toUpperCase()}
+																		</div>
+																	</div>
+																) : (
+																	formatCellValue(key, row[key], activeReport)
+																)}
+															</td>
+														))
+														: activeReport === "books"
+															? getBooksColumnOrder(data).map((key, j) => (
+																<td key={j} className="p-3 border">
+																	{key === "coverUrl" && row[key] ? (
+																		<img
+																			src={row[key]}
+																			alt="Book cover"
+																			className="w-16 h-20 object-cover rounded border"
+																		/>
+																	) : key === "coverUrl" ? (
+																		<span className="text-gray-400 text-sm">No image</span>
+																	) : (
+																		formatCellValue(key, row[key], activeReport)
+																	)}
+																</td>
+															))
+															: Object.entries(row)
+																.filter(([key, val], index, arr) => {
+																	if (activeReport === "users") return key !== "id";
+																	return true;
+																})
+																.map(([key, val], j) => (
+																	<td key={j} className="p-3 border">
+																		{formatCellValue(key, val, activeReport)}
+																	</td>
+																))}
 									</tr>
 								))}
 							</tbody>

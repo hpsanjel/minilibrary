@@ -1,17 +1,28 @@
 import prisma from "@/lib/prisma";
-import { NextRequest } from "next/server";
+import JSZip from "jszip";
 
 export async function POST(request) {
 	try {
 		const formData = await request.formData();
-		const csvFile = formData.get("csvFile");
+		const zipFile = formData.get("csvFile"); // Keep same form field name for compatibility
 
-		if (!csvFile) {
-			return new Response(JSON.stringify({ error: "No CSV file provided" }), { status: 400, headers: { "Content-Type": "application/json" } });
+		if (!zipFile) {
+			return new Response(JSON.stringify({ error: "No ZIP file provided" }), { status: 400, headers: { "Content-Type": "application/json" } });
 		}
 
-		// Read CSV file content
-		const csvText = await csvFile.text();
+		// Load ZIP file
+		const zipBuffer = await zipFile.arrayBuffer();
+		const zip = await JSZip.loadAsync(zipBuffer);
+
+		// Find CSV file in ZIP (look for .csv extension)
+		const csvFileName = Object.keys(zip.files).find((name) => name.toLowerCase().endsWith(".csv") && !name.startsWith("__MACOSX"));
+
+		if (!csvFileName) {
+			return new Response(JSON.stringify({ error: "No CSV file found in ZIP. Please include a .csv file." }), { status: 400, headers: { "Content-Type": "application/json" } });
+		}
+
+		// Read CSV content
+		const csvText = await zip.files[csvFileName].async("text");
 		const lines = csvText.split("\n").filter((line) => line.trim());
 
 		if (lines.length < 2) {
@@ -21,21 +32,41 @@ export async function POST(request) {
 		// Parse CSV header
 		const header = lines[0].split(",").map((col) => col.trim().replace(/"/g, ""));
 		const requiredColumns = ["title", "author"];
-		const optionalColumns = ["isbn", "copies", "coverUrl"];
+		const optionalColumns = ["isbn", "copies", "imageFileName"];
 		const allowedColumns = [...requiredColumns, ...optionalColumns];
 
-		// Filter out any 'id' column if present (we don't want to set manual IDs)
+		// Filter out any 'id' column if present
 		const filteredHeader = header.filter((col) => col.toLowerCase() !== "id");
 
 		// Validate header
 		const missingRequired = requiredColumns.filter((col) => !filteredHeader.includes(col));
 		if (missingRequired.length > 0) {
-			return new Response(
-				JSON.stringify({
-					error: `Missing required columns: ${missingRequired.join(", ")}. Required: ${requiredColumns.join(", ")}`,
-				}),
-				{ status: 400, headers: { "Content-Type": "application/json" } }
-			);
+			return new Response(JSON.stringify({ error: `Missing required columns: ${missingRequired.join(", ")}. Required: ${requiredColumns.join(", ")}` }), { status: 400, headers: { "Content-Type": "application/json" } });
+		}
+
+		// Extract all images from ZIP and convert to base64
+		const imageMap = {};
+		for (const fileName in zip.files) {
+			const file = zip.files[fileName];
+			// Skip directories and system files
+			if (file.dir || fileName.startsWith("__MACOSX") || fileName.endsWith(".csv")) continue;
+
+			// Check if it's an image file
+			const ext = fileName.toLowerCase().split(".").pop();
+			if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) {
+				try {
+					const imageBuffer = await file.async("uint8array");
+					const base64 = Buffer.from(imageBuffer).toString("base64");
+					const mimeType = ext === "png" ? "image/png" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/jpeg";
+					const base64Image = `data:${mimeType};base64,${base64}`;
+
+					// Store with just the filename (no path)
+					const justFileName = fileName.split("/").pop();
+					imageMap[justFileName] = base64Image;
+				} catch (imgError) {
+					console.error(`Failed to process image ${fileName}:`, imgError);
+				}
+			}
 		}
 
 		// Process data rows
@@ -77,6 +108,8 @@ export async function POST(request) {
 					originalHeaderIndexMap[col] = index;
 				});
 
+				let imageFileName = null;
+
 				filteredHeader.forEach((col) => {
 					if (allowedColumns.includes(col)) {
 						const originalIndex = originalHeaderIndexMap[col];
@@ -85,13 +118,21 @@ export async function POST(request) {
 
 						if (col === "copies") {
 							bookData[col] = value ? parseInt(value) || 1 : 1;
-						} else if (col === "isbn" || col === "coverUrl") {
+						} else if (col === "isbn") {
 							bookData[col] = value || null;
+						} else if (col === "imageFileName") {
+							imageFileName = value || null;
 						} else {
 							bookData[col] = value;
 						}
 					}
 				});
+
+				// Match image from ZIP
+				let coverImage = null;
+				if (imageFileName && imageMap[imageFileName]) {
+					coverImage = imageMap[imageFileName];
+				}
 
 				// Validate required fields
 				if (!bookData.title || !bookData.author) {
@@ -117,7 +158,7 @@ export async function POST(request) {
 							isbn: bookData.isbn,
 							copies: bookData.copies,
 							available: bookData.copies > 0,
-							coverUrl: bookData.coverUrl,
+							coverUrl: coverImage, // Store base64 image
 						},
 					});
 					results.successful++;
@@ -146,7 +187,7 @@ export async function POST(request) {
 									isbn: bookData.isbn,
 									copies: bookData.copies,
 									available: bookData.copies > 0,
-									coverUrl: bookData.coverUrl,
+									coverUrl: coverImage,
 								},
 							});
 							results.successful++;
@@ -185,7 +226,7 @@ export async function POST(request) {
 			{ status, headers: { "Content-Type": "application/json" } }
 		);
 	} catch (error) {
-		console.error("CSV upload error:", error);
-		return new Response(JSON.stringify({ error: "Failed to process CSV file" }), { status: 500, headers: { "Content-Type": "application/json" } });
+		console.error("ZIP upload error:", error);
+		return new Response(JSON.stringify({ error: `Failed to process ZIP file: ${error.message}` }), { status: 500, headers: { "Content-Type": "application/json" } });
 	}
 }

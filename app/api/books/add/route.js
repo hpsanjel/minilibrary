@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 
 export async function POST(req) {
 	try {
-		const { title, author, isbn, copies, available, coverUrl } = await req.json();
+		const { title, author, isbn, copies, available, coverImage } = await req.json();
 
 		// Validate required fields
 		if (!title || !author) {
@@ -16,7 +16,7 @@ export async function POST(req) {
 				isbn: isbn || null,
 				copies: copies !== undefined ? copies : 1,
 				available: available !== undefined ? available : true,
-				coverUrl: coverUrl || null, // include coverUrl
+				coverUrl: coverImage || null, // Store base64 image in coverUrl field
 			},
 		});
 

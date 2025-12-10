@@ -147,6 +147,8 @@ export default function AuthForm() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const callbackUrl = searchParams.get("callbackUrl");
+	const urlError = searchParams.get("error"); // Get error from URL if redirected from NextAuth
+
 	const [isSignUp, setIsSignUp] = useState(false);
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -162,19 +164,33 @@ export default function AuthForm() {
 	const [showResendVerification, setShowResendVerification] = useState(false);
 	const [resendingEmail, setResendingEmail] = useState(false);
 
+	// Show URL error if present
+	useEffect(() => {
+		if (urlError) {
+			console.log("NextAuth URL error:", urlError);
+			setError(`Authentication error: ${urlError}`);
+		}
+	}, [urlError]);
+
 	// Redirect if already authenticated (in useEffect to avoid setState in render)
 	useEffect(() => {
+		console.log("AuthForm: status =", status, "role =", session?.user?.role, "callbackUrl =", callbackUrl);
+
 		if (status === "authenticated") {
+			let redirectUrl;
+
 			if (callbackUrl) {
-				// Redirect to the original page user was trying to access
-				router.replace(callbackUrl);
+				redirectUrl = callbackUrl;
 			} else if (session?.user?.role === "ADMIN") {
-				router.replace("/admin/dashboard");
+				redirectUrl = "/admin/dashboard";
 			} else if (session?.user?.role === "STUDENT") {
-				router.replace("/books");
+				redirectUrl = "/books";
 			} else {
-				router.replace("/");
+				redirectUrl = "/";
 			}
+
+			console.log("AuthForm: Redirecting to:", redirectUrl);
+			router.replace(redirectUrl);
 		}
 	}, [status, session, router, callbackUrl]);
 	if (status === "authenticated") return null;
@@ -245,14 +261,16 @@ export default function AuthForm() {
 			});
 			setLoading(false);
 			if (res?.error) {
+				console.log("Sign in error:", res.error); // Debug log
 				if (res.error === "EMAIL_NOT_VERIFIED") {
 					setError("Your email is not verified. Please check your inbox or resend verification email.");
 					setShowResendVerification(true);
-				} else if (res.error === "INVALID_CREDENTIALS") {
+				} else if (res.error === "INVALID_CREDENTIALS" || res.error === "CredentialsSignin") {
+					// CredentialsSignin is the default error when authorize returns null
 					setError("Invalid email or password");
 					setShowResendVerification(false);
 				} else {
-					setError("Sign in failed. Please try again.");
+					setError(`Sign in failed: ${res.error}`);
 					setShowResendVerification(false);
 				}
 			} else {

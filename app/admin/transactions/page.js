@@ -16,6 +16,9 @@ export default function AdminTransactionsPage() {
 	const [successMessage, setSuccessMessage] = useState("");
 	const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
+	// Modal loading states
+	const [modalLoading, setModalLoading] = useState(false);
+
 	// Button states for each transaction
 	const [processingButtons, setProcessingButtons] = useState({}); // { transactionId: 'issue'|'return'|'clearFine' }
 	const [successButtons, setSuccessButtons] = useState({}); // { transactionId: 'issue'|'return'|'clearFine' }
@@ -80,6 +83,9 @@ export default function AdminTransactionsPage() {
 
 		const transactionId = pendingReturnTx.id;
 
+		// Set processing state
+		setProcessingButtons((prev) => ({ ...prev, [transactionId]: "return" }));
+
 		try {
 			// Calculate current fine amount for the fine payment record
 			const now = new Date();
@@ -120,6 +126,15 @@ export default function AdminTransactionsPage() {
 			});
 
 			if (returnRes.ok) {
+				// Set success state
+				setProcessingButtons((prev) => ({ ...prev, [transactionId]: null }));
+				setSuccessButtons((prev) => ({ ...prev, [transactionId]: "return" }));
+
+				// Clear success state after 3 seconds
+				setTimeout(() => {
+					setSuccessButtons((prev) => ({ ...prev, [transactionId]: null }));
+				}, 3000);
+
 				// Show success message
 				setSuccessMessage(`Book returned successfully! Fine of ${currentFine} NOK cleared.`);
 				setShowSuccessMessage(true);
@@ -134,7 +149,12 @@ export default function AdminTransactionsPage() {
 			}
 		} catch (error) {
 			console.error("Failed to clear fine and return book:", error);
-			// You might want to show an error message to the user
+			// Clear processing state on error
+			setProcessingButtons((prev) => ({ ...prev, [transactionId]: null }));
+			// Show error message
+			setSuccessMessage(`Error: ${error.message || "Failed to clear fine and return book"}`);
+			setShowSuccessMessage(true);
+			setTimeout(() => setShowSuccessMessage(false), 5000);
 		}
 	};
 
@@ -487,9 +507,18 @@ export default function AdminTransactionsPage() {
 			{showFineModal && pendingIssueTx && (
 				<ConfirmationModal
 					isOpen={showFineModal}
-					onClose={() => setShowFineModal(false)}
+					isLoading={modalLoading}
+					onClose={() => {
+						if (!modalLoading) {
+							setShowFineModal(false);
+							setPendingIssueTx(null);
+						}
+					}}
 					onConfirm={async () => {
 						const transactionId = pendingIssueTx.id;
+
+						// Set modal loading state
+						setModalLoading(true);
 
 						// Calculate days overdue
 						const now = new Date();
@@ -512,6 +541,9 @@ export default function AdminTransactionsPage() {
 							});
 
 							if (res.ok) {
+								// Clear modal loading state
+								setModalLoading(false);
+
 								// Set success state
 								setProcessingButtons((prev) => ({ ...prev, [transactionId]: null }));
 								setSuccessButtons((prev) => ({ ...prev, [transactionId]: "return" }));
@@ -525,13 +557,15 @@ export default function AdminTransactionsPage() {
 								setPendingIssueTx(null);
 								fetchTransactions();
 							} else {
-								// Clear processing state on error
+								// Clear modal loading state and processing state on error
+								setModalLoading(false);
 								setProcessingButtons((prev) => ({ ...prev, [transactionId]: null }));
 								setShowFineModal(false);
 								setPendingIssueTx(null);
 							}
 						} catch (error) {
-							// Clear processing state on error
+							// Clear modal loading state and processing state on error
+							setModalLoading(false);
 							setProcessingButtons((prev) => ({ ...prev, [transactionId]: null }));
 							setShowFineModal(false);
 							setPendingIssueTx(null);
@@ -571,8 +605,17 @@ export default function AdminTransactionsPage() {
 			{showClearFineModal && pendingClearFineTx && (
 				<ConfirmationModal
 					isOpen={showClearFineModal}
-					onClose={() => setShowClearFineModal(false)}
-					onConfirm={confirmClearFine}
+					isLoading={modalLoading}
+					onClose={() => {
+						if (!modalLoading) {
+							setShowClearFineModal(false);
+							setPendingClearFineTx(null);
+						}
+					}}
+					onConfirm={() => {
+						setModalLoading(true);
+						confirmClearFine().finally(() => setModalLoading(false));
+					}}
 					title="Clear Fine"
 					message={
 						<>
@@ -597,11 +640,17 @@ export default function AdminTransactionsPage() {
 			{showFineWarningModal && pendingReturnTx && (
 				<ConfirmationModal
 					isOpen={showFineWarningModal}
+					isLoading={modalLoading}
 					onClose={() => {
-						setShowFineWarningModal(false);
-						setPendingReturnTx(null);
+						if (!modalLoading) {
+							setShowFineWarningModal(false);
+							setPendingReturnTx(null);
+						}
 					}}
-					onConfirm={clearFineAndMarkReturned}
+					onConfirm={() => {
+						setModalLoading(true);
+						clearFineAndMarkReturned().finally(() => setModalLoading(false));
+					}}
 					title="Outstanding Fine - Clear and Return Book"
 					message={(() => {
 						const now = new Date();

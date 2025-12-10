@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Upload, Plus, Download } from "lucide-react";
+import ImageUpload from "@/components/ImageUpload";
 
 export default function AddBookPage() {
 	const [activeTab, setActiveTab] = useState("single"); // "single" or "csv"
@@ -9,7 +10,7 @@ export default function AddBookPage() {
 	const [isbn, setIsbn] = useState("");
 	const [copies, setCopies] = useState(1);
 	const [available, setAvailable] = useState(true);
-	const [coverUrl, setCoverUrl] = useState("");
+	const [coverImage, setCoverImage] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [success, setSuccess] = useState("");
 	const [error, setError] = useState("");
@@ -30,7 +31,7 @@ export default function AddBookPage() {
 		const res = await fetch("/api/books/add", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ title, author, isbn, copies, available, coverUrl }),
+			body: JSON.stringify({ title, author, isbn, copies, available, coverImage }),
 		});
 
 		setLoading(false);
@@ -42,7 +43,7 @@ export default function AddBookPage() {
 			setIsbn("");
 			setCopies(1);
 			setAvailable(true);
-			setCoverUrl("");
+			setCoverImage("");
 		} else {
 			const data = await res.json();
 			setError(data.error || "Failed to add book");
@@ -91,9 +92,9 @@ export default function AddBookPage() {
 	}
 
 	function downloadSampleCsv() {
-		const csvContent = `title,author,isbn,copies,coverUrl
-"The Great Gatsby","F. Scott Fitzgerald","9780743273565",3,"https://example.com/gatsby.jpg"
-"To Kill a Mockingbird","Harper Lee","9780061120084",2,"https://example.com/mockingbird.jpg"
+		const csvContent = `title,author,isbn,copies,imageFileName
+"The Great Gatsby","F. Scott Fitzgerald","9780743273565",3,"gatsby.jpg"
+"To Kill a Mockingbird","Harper Lee","9780061120084",2,"mockingbird.jpg"
 "1984","George Orwell","9780451524935",4,""`;
 
 		const blob = new Blob([csvContent], { type: "text/csv" });
@@ -117,7 +118,7 @@ export default function AddBookPage() {
 				</button>
 				<button onClick={() => setActiveTab("csv")} className={`px-6 py-3 rounded-lg flex items-center gap-2 font-medium transition-colors ${activeTab === "csv" ? "bg-blue-600 text-white shadow-md" : "bg-gray-200 hover:bg-gray-300 text-gray-700"}`}>
 					<Upload className="w-4 h-4" />
-					CSV Upload
+					ZIP Upload
 				</button>
 			</div>
 
@@ -140,10 +141,7 @@ export default function AddBookPage() {
 								<label className="block mb-3 font-semibold text-gray-700">ISBN (optional)</label>
 								<input type="text" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent" value={isbn} onChange={(e) => setIsbn(e.target.value)} placeholder="e.g. 9780451524935" />
 							</div>
-							<div>
-								<label className="block mb-3 font-semibold text-gray-700">Cover Image URL (optional)</label>
-								<input type="url" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent" value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} placeholder="https://example.com/cover.jpg" />
-							</div>
+							<ImageUpload image={coverImage} setImage={setCoverImage} label="Cover Image" optional={true} />
 							<div>
 								<label className="block mb-3 font-semibold text-gray-700">Number of Copies</label>
 								<input type="number" min={1} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent" value={copies} onChange={(e) => setCopies(Number(e.target.value))} required />
@@ -169,13 +167,14 @@ export default function AddBookPage() {
 						<div className="bg-white p-8 rounded-xl shadow-lg border border-gray-100">
 							{/* Instructions */}
 							<div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-								<h3 className="font-semibold text-blue-900 mb-3">CSV Upload Instructions</h3>
+								<h3 className="font-semibold text-blue-900 mb-3">ZIP Upload Instructions</h3>
 								<ul className="text-sm text-blue-700 space-y-2">
-									<li>• CSV must include columns: title, author, isbn, copies, coverUrl</li>
+									<li>• Create a folder with your CSV file and book cover images</li>
+									<li>• CSV must include columns: title, author, isbn, copies, imageFileName</li>
 									<li>• Title and author are required fields</li>
-									<li>• ISBN and coverUrl are optional (can be empty)</li>
-									<li>• Copies should be a positive number (defaults to 1)</li>
-									<li>• Use quotes for text fields that contain commas</li>
+									<li>• imageFileName should match the image file names in the ZIP (e.g., "gatsby.jpg")</li>
+									<li>• Leave imageFileName empty if no cover image for that book</li>
+									<li>• ZIP the folder and upload it below</li>
 								</ul>
 								<button onClick={downloadSampleCsv} className="mt-4 flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium transition-colors">
 									<Download className="w-4 h-4" />
@@ -188,8 +187,8 @@ export default function AddBookPage() {
 								{csvSuccess && <div className="text-green-600 bg-green-50 p-4 rounded-lg border border-green-200">{csvSuccess}</div>}
 								{csvError && <div className="text-red-600 bg-red-50 p-4 rounded-lg border border-red-200">{csvError}</div>}
 								<div>
-									<label className="block mb-3 font-semibold text-gray-700">Select CSV File</label>
-									<input id="csvFile" type="file" accept=".csv" onChange={(e) => setCsvFile(e.target.files[0])} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent" required />
+									<label className="block mb-3 font-semibold text-gray-700">Select ZIP File</label>
+									<input id="csvFile" type="file" accept=".zip" onChange={(e) => setCsvFile(e.target.files[0])} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent" required />
 								</div>{" "}
 								<button type="submit" className="w-full py-3 px-6 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md">
 									{csvLoading ? "Uploading..." : "Upload CSV"}

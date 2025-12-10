@@ -6,7 +6,7 @@ import { Book, UserIcon, List, FileWarning, Undo2, BarChart3 } from "lucide-reac
 export default function AdminSidebar() {
 	const router = useRouter();
 	return (
-		<aside className="hidden md:flex flex-col w-64 bg-white shadow-lg min-h-screen">
+		<aside className="hidden md:flex flex-col w-64 flex-shrink-0 bg-white shadow-lg min-h-screen">
 			<div className="p-6 text-2xl font-bold border-b cursor-pointer" onClick={() => router.push("/admin/dashboard")}>
 				📚 Dashboard
 			</div>

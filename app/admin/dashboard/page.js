@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { BookIcon, HandGrab, List, Menu, UserIcon, X, Search } from "lucide-react";
 import QuickSearchBox from "@/components/QuickSearchBox";
 
@@ -11,6 +11,9 @@ export default function AdminDashboard() {
 		users: 0,
 		transactions: 0,
 		borrowed: 0,
+		availableBooks: 0,
+		activeTransactions: 0,
+		completedTransactions: 0,
 	});
 	const [loading, setLoading] = useState(true);
 	const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -24,11 +27,19 @@ export default function AdminDashboard() {
 			const users = await usersRes.json();
 			const transactions = await txRes.json();
 
+			const borrowed = books.filter((b) => !b.available).length;
+			const availableBooks = books.length - borrowed;
+			const activeTransactions = transactions.filter((t) => !t.returned).length;
+			const completedTransactions = transactions.filter((t) => t.returned).length;
+
 			setStats({
 				books: books.length,
 				users: users.length,
 				transactions: transactions.length,
-				borrowed: books.filter((b) => !b.available).length,
+				borrowed,
+				availableBooks,
+				activeTransactions,
+				completedTransactions,
 			});
 			setLoading(false);
 		}
@@ -100,25 +111,39 @@ export default function AdminDashboard() {
 									))}
 								</Pie>
 								<Tooltip />
+								<Legend />
 							</PieChart>
 						</ResponsiveContainer>
 					</div>
 
-					{/* Bar Chart */}
+					{/* Library Health Dashboard */}
 					<div className="bg-white rounded-xl shadow p-6">
-						<h2 className="text-xl font-bold mb-4">Overview</h2>
+						<h2 className="text-xl font-bold mb-4">Library Health Dashboard</h2>
 						<ResponsiveContainer width="100%" height={300}>
 							<BarChart
 								data={[
-									{ name: "Books", value: stats.books },
-									{ name: "Users", value: stats.users },
-									{ name: "Transactions", value: stats.transactions },
+									{
+										category: "Books",
+										Total: stats.books,
+										Available: stats.availableBooks,
+										Borrowed: stats.borrowed
+									},
+									{
+										category: "Transactions",
+										Completed: stats.completedTransactions,
+										Active: stats.activeTransactions
+									},
 								]}
 							>
-								<XAxis dataKey="name" />
+								<XAxis dataKey="category" />
 								<YAxis />
 								<Tooltip />
-								<Bar dataKey="value" fill="#3b82f6" />
+								<Legend />
+								<Bar dataKey="Total" fill="#3b82f6" />
+								<Bar dataKey="Available" fill="#10b981" />
+								<Bar dataKey="Borrowed" fill="#f59e0b" />
+								<Bar dataKey="Completed" fill="#8b5cf6" />
+								<Bar dataKey="Active" fill="#ef4444" />
 							</BarChart>
 						</ResponsiveContainer>
 					</div>

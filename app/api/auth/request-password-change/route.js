@@ -26,6 +26,9 @@ export async function POST(req) {
 		const token = crypto.randomBytes(32).toString("hex");
 		const tokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
 
+		// Log token for local testing
+		console.log("Password reset token generated for", email, ":", token);
+
 		// Update user with password change token
 		await prisma.user.update({
 			where: { email },
@@ -49,6 +52,8 @@ export async function POST(req) {
 			JSON.stringify({
 				success: true,
 				message: "Password change link sent to your email",
+				// include token in response for local debugging only
+				debugToken: process.env.NODE_ENV !== "production" ? token : undefined,
 			}),
 			{
 				status: 200,

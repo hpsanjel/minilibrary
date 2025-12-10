@@ -10,6 +10,7 @@ function ChangePasswordForm() {
 	const [formData, setFormData] = useState({
 		newPassword: "",
 		confirmPassword: "",
+		currentPassword: "",
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [message, setMessage] = useState("");
@@ -58,17 +59,42 @@ function ChangePasswordForm() {
 			return;
 		}
 
+		// If token is present, use token-based flow. Otherwise use authenticated flow which requires currentPassword
 		setIsSubmitting(true);
 		setMessage("");
 
 		try {
+			let body;
+			if (token) {
+				body = { token, newPassword: formData.newPassword };
+			} else {
+				// Need to verify current password first
+				if (!formData.currentPassword) {
+					setMessage("Please enter your current password to confirm change.");
+					setMessageType("error");
+					setIsSubmitting(false);
+					return;
+				}
+				// Optionally verify current password via API
+				const verifyRes = await fetch("/api/auth/verify-current-password", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ currentPassword: formData.currentPassword }),
+				});
+				const verifyData = await verifyRes.json();
+				if (!verifyRes.ok || !verifyData.valid) {
+					setMessage(verifyData.error || "Current password is incorrect");
+					setMessageType("error");
+					setIsSubmitting(false);
+					return;
+				}
+				body = { currentPassword: formData.currentPassword, newPassword: formData.newPassword };
+			}
+
 			const response = await fetch("/api/auth/change-password", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					token,
-					newPassword: formData.newPassword,
-				}),
+				body: JSON.stringify(body),
 			});
 
 			const result = await response.json();
@@ -152,6 +178,15 @@ function ChangePasswordForm() {
 						</label>
 						<input type="password" id="confirmPassword" name="confirmPassword" value={formData.confirmPassword} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Confirm new password" required disabled={isSubmitting} minLength={6} />
 					</div>
+
+					{!token && (
+						<div>
+							<label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-2">
+								Current Password
+							</label>
+							<input type="password" id="currentPassword" name="currentPassword" value={formData.currentPassword} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter current password" required={!token} disabled={isSubmitting} minLength={6} />
+						</div>
+					)}
 
 					{message && <div className={`p-3 rounded-md text-sm ${messageType === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>{message}</div>}
 

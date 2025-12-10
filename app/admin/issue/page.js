@@ -343,7 +343,7 @@ export default function AdminIssuePage() {
 					{loading ? "Issuing..." : "Issue Book"}
 				</button>
 				{message && (
-					<div className="text-center text-sm mt-2 bg-red-100 border border-red-300 text-red-700 rounded p-2 relative">
+					<div className="text-center text-sm mt-2 bg-blue-100 border border-red-300 text-red-700 rounded p-2 relative">
 						{message}
 						<button type="button" className="absolute right-2 top-2 text-red-700" onClick={() => setMessage("")}>
 							×
