@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import BooksPageClient from "@/components/BooksPageClient";
 import prisma from "@/lib/prisma";
 
@@ -32,7 +33,9 @@ export default async function BooksPage() {
 
 		return (
 			<div className="max-w-4xl mx-auto">
-				<BooksPageClient books={serializedBooks} />
+				<Suspense fallback={<div className="p-8 text-center text-gray-500">Loading library...</div>}>
+					<BooksPageClient books={serializedBooks} />
+				</Suspense>
 			</div>
 		);
 	} catch (error) {
