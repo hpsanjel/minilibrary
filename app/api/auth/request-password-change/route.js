@@ -6,20 +6,29 @@ import { getBaseUrl } from "@/lib/getBaseUrl";
 
 export async function POST(req) {
 	try {
-		const { email } = await req.json();
+		const { email, currentPassword } = await req.json();
+
 		if (!email) {
-			return new Response(JSON.stringify({ error: "Email is required" }), {
-				status: 400,
-			});
+			return new Response(JSON.stringify({ error: "Email is required" }), { status: 400 });
 		}
+
+		if (!currentPassword) {
+			return new Response(JSON.stringify({ error: "Current password is required" }), { status: 400 });
+		}
+
 		// Find user
 		const user = await prisma.user.findUnique({
 			where: { email },
 		});
+
 		if (!user) {
-			return new Response(JSON.stringify({ error: "User not found" }), {
-				status: 404,
-			});
+			return new Response(JSON.stringify({ error: "User not found" }), { status: 404 });
+		}
+
+		// Verify current password
+		const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+		if (!isPasswordValid) {
+			return new Response(JSON.stringify({ error: "Incorrect current password" }), { status: 401 });
 		}
 
 		// Generate password change token

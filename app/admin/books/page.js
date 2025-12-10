@@ -355,9 +355,9 @@ function BookTransactionCard({ transaction, isActive }) {
 		<div className={`border rounded-lg p-4 ${isOverdue ? "border-red-200 bg-red-50" : "border-gray-200 bg-gray-50"}`}>
 			<div className="flex items-center justify-between">
 				<div className="flex-1">
-					<h4 className="font-medium text-gray-900">{transaction.user.name}</h4>
-					<p className="text-sm text-gray-600">{transaction.user.email}</p>
-					{transaction.user.membershipNumber && <p className="text-xs text-gray-500 font-mono">Member: {transaction.user.membershipNumber}</p>}
+					<h4 className="font-medium text-gray-900">{transaction.User.name}</h4>
+					<p className="text-sm text-gray-600">{transaction.User.email}</p>
+					{transaction.User.membershipNumber && <p className="text-xs text-gray-500 font-mono">Member: {transaction.User.membershipNumber}</p>}
 				</div>
 				<div className="text-right">
 					<div className="flex items-center gap-2 mb-1">

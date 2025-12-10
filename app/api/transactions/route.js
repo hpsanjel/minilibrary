@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { sendBookIssuedEmail } from "@/lib/sendBookIssuedEmail";
 import sendBookReturnedEmail from "@/lib/sendBookReturnedEmail";
 import sendFineClearedEmail from "@/lib/sendFineClearedEmailEnhanced";
+import { notifyBookIssued, notifyBookReturned, notifyFineCleared } from "@/lib/notifications";
 
 export async function POST(req) {
 	try {
@@ -50,6 +51,13 @@ export async function POST(req) {
 			console.error("Failed to send issue confirmation email", emailErr);
 		}
 
+		// Create notification for book issued
+		try {
+			await notifyBookIssued({ ...transaction, book, user });
+		} catch (notifErr) {
+			console.error("Failed to create notification", notifErr);
+		}
+
 		return new Response(JSON.stringify(transaction));
 	} catch (error) {
 		console.error(error);
@@ -66,7 +74,7 @@ export async function GET(request) {
 		// Get transactions for specific user
 		const transactions = await prisma.transaction.findMany({
 			where: { userId: parseInt(userId) },
-			include: { user: true, book: true },
+			include: { User: true, Book: true },
 			orderBy: { createdAt: "desc" },
 		});
 		return new Response(JSON.stringify(transactions));
@@ -74,14 +82,14 @@ export async function GET(request) {
 		// Get transactions for specific book
 		const transactions = await prisma.transaction.findMany({
 			where: { bookId: parseInt(bookId) },
-			include: { user: true, book: true },
+			include: { User: true, Book: true },
 			orderBy: { createdAt: "desc" },
 		});
 		return new Response(JSON.stringify(transactions));
 	} else {
 		// Get all transactions
 		const transactions = await prisma.transaction.findMany({
-			include: { user: true, book: true },
+			include: { User: true, Book: true },
 			orderBy: { createdAt: "desc" },
 		});
 		return new Response(JSON.stringify(transactions));
@@ -247,6 +255,13 @@ export async function PATCH(req) {
 				// Don't fail the request if email fails
 			}
 
+			// Create notification for fine cleared
+			try {
+				await notifyFineCleared(transactionRecord.userId, clearedFineAmount, book.title);
+			} catch (notifErr) {
+				console.error("Failed to create notification", notifErr);
+			}
+
 			return new Response(
 				JSON.stringify({
 					transaction,
@@ -366,6 +381,22 @@ export async function PATCH(req) {
 				console.error("Failed to send confirmation emails", emailErr);
 			}
 
+			// Create notification for book returned
+			try {
+				await notifyBookReturned({ ...transaction, book, user });
+			} catch (notifErr) {
+				console.error("Failed to create notification", notifErr);
+			}
+
+			// Create notification for fine cleared if applicable
+			if (clearFine && fineAmount > 0) {
+				try {
+					await notifyFineCleared(transactionRecord.userId, fineAmount, book.title);
+				} catch (notifErr) {
+					console.error("Failed to create notification", notifErr);
+				}
+			}
+
 			return new Response(
 				JSON.stringify({
 					transaction,
@@ -407,7 +438,7 @@ export async function PATCH(req) {
 					fine: 0,
 					returnedAt: null,
 				},
-				include: { user: true, book: true },
+				include: { User: true, Book: true },
 			});
 
 			// Decrement book copies
@@ -428,6 +459,13 @@ export async function PATCH(req) {
 				});
 			} catch (emailErr) {
 				console.error("Failed to send re-issue confirmation email", emailErr);
+			}
+
+			// Create notification for book re-issued
+			try {
+				await notifyBookIssued(newTransaction);
+			} catch (notifErr) {
+				console.error("Failed to create notification", notifErr);
 			}
 
 			return new Response(JSON.stringify(newTransaction));

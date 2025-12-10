@@ -7,7 +7,7 @@ export async function GET() {
 			returned: true, // Only show books that have been returned
 		},
 		include: {
-			user: {
+			User: {
 				select: {
 					id: true,
 					name: true,
@@ -15,7 +15,7 @@ export async function GET() {
 					role: true,
 				},
 			},
-			book: {
+			Book: {
 				select: {
 					id: true,
 					title: true,
@@ -43,8 +43,8 @@ export async function PATCH(req) {
 			fine: fine || 0,
 		},
 		include: {
-			user: { select: { id: true, name: true, email: true, role: true } },
-			book: { select: { id: true, title: true, author: true, isbn: true } },
+			User: { select: { id: true, name: true, email: true, role: true } },
+			Book: { select: { id: true, title: true, author: true, isbn: true } },
 		},
 	});
 

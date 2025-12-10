@@ -82,6 +82,8 @@ export default function ReportsPage() {
 				deadline: "Due Date",
 				returned: "Status",
 				fine: "Fine Amount",
+				User: "Borrower",
+				Book: "Book Title",
 			},
 			returns: {
 				id: "Transaction ID",
@@ -95,6 +97,8 @@ export default function ReportsPage() {
 				condition: "Book Condition",
 				returnNotes: "Return Notes",
 				fine: "Fine Amount",
+				User: "Borrower",
+				Book: "Book Title",
 			},
 			defaulters: {
 				id: "Transaction ID",
@@ -106,6 +110,8 @@ export default function ReportsPage() {
 				deadline: "Due Date",
 				daysOverdue: "Days Overdue",
 				fine: "Fine Amount",
+				User: "Defaulter",
+				Book: "Book Title",
 			},
 			books: {
 				availableCopies: "Available Copies",
@@ -181,10 +187,12 @@ export default function ReportsPage() {
 		// Define desired order: book, user, then other fields
 		const orderedKeys = [];
 		if (filteredKeys.includes("book")) orderedKeys.push("book");
+		if (filteredKeys.includes("Book")) orderedKeys.push("Book");
 		if (filteredKeys.includes("user")) orderedKeys.push("user");
+		if (filteredKeys.includes("User")) orderedKeys.push("User");
 
 		// Add remaining fields in logical order
-		const remainingKeys = filteredKeys.filter((key) => !["book", "user"].includes(key));
+		const remainingKeys = filteredKeys.filter((key) => !["book", "user", "Book", "User"].includes(key));
 		const preferredOrder = ["createdAt", "deadline", "returned", "fine", "returnedAt", "condition", "returnNotes"];
 
 		preferredOrder.forEach((key) => {
@@ -209,10 +217,12 @@ export default function ReportsPage() {
 		// Define desired order: book, user, then other fields
 		const orderedKeys = [];
 		if (filteredKeys.includes("book")) orderedKeys.push("book");
+		if (filteredKeys.includes("Book")) orderedKeys.push("Book");
 		if (filteredKeys.includes("user")) orderedKeys.push("user");
+		if (filteredKeys.includes("User")) orderedKeys.push("User");
 
 		// Add remaining fields in logical order for returns
-		const remainingKeys = filteredKeys.filter((key) => !["book", "user"].includes(key));
+		const remainingKeys = filteredKeys.filter((key) => !["book", "user", "Book", "User"].includes(key));
 		const preferredOrder = ["createdAt", "returnedAt", "deadline", "condition", "fine", "returnNotes", "returned"];
 
 		preferredOrder.forEach((key) => {
@@ -237,10 +247,12 @@ export default function ReportsPage() {
 		// Define desired order: book, user, then other fields
 		const orderedKeys = [];
 		if (filteredKeys.includes("book")) orderedKeys.push("book");
+		if (filteredKeys.includes("Book")) orderedKeys.push("Book");
 		if (filteredKeys.includes("user")) orderedKeys.push("user");
+		if (filteredKeys.includes("User")) orderedKeys.push("User");
 
 		// Add remaining fields in logical order for defaulters
-		const remainingKeys = filteredKeys.filter((key) => !["book", "user"].includes(key));
+		const remainingKeys = filteredKeys.filter((key) => !["book", "user", "Book", "User"].includes(key));
 		const preferredOrder = ["createdAt", "deadline", "daysOverdue", "fine", "returned", "returnedAt", "condition", "returnNotes"];
 
 		preferredOrder.forEach((key) => {
@@ -256,8 +268,8 @@ export default function ReportsPage() {
 	};
 	const formatCellValue = (key, val, reportType) => {
 		if (typeof val === "object" && val !== null) {
-			if (key === "user") return val.name || val.email;
-			if (key === "book") return val.title;
+			if (key === "user" || key === "User") return val.name || val.email;
+			if (key === "book" || key === "Book") return val.title;
 			return JSON.stringify(val);
 		}
 
@@ -387,7 +399,7 @@ export default function ReportsPage() {
 			csvContent = headers.join(",") + "\n";
 
 			filteredPayments.forEach((payment, index) => {
-				const row = [index + 1, `"${formatDateTime(payment.paidAt)}"`, `"${payment.user.name || "N/A"}"`, `"${payment.user.email}"`, `"${payment.transaction.book.title}"`, `"${payment.transaction.book.author}"`, payment.amount, `"${payment.processedBy || "N/A"}"`, `"${payment.notes || "-"}"`];
+				const row = [index + 1, `"${formatDateTime(payment.paidAt)}"`, `"${payment.User.name || "N/A"}"`, `"${payment.User.email}"`, `"${payment.Transaction.Book.title}"`, `"${payment.Transaction.Book.author}"`, payment.amount, `"${payment.processedBy || "N/A"}"`, `"${payment.notes || "-"}"`];
 				csvContent += row.join(",") + "\n";
 			});
 
@@ -500,7 +512,7 @@ export default function ReportsPage() {
 			}
 
 			const headers = [["S.N.", "Date & Time", "Student Name", "Student Email", "Book Title", "Book Author", "Amount (NOK)", "Processed By", "Notes"]];
-			const tableData = filteredPayments.map((payment, index) => [index + 1, formatDateTime(payment.paidAt), payment.user.name || "N/A", payment.user.email, payment.transaction.book.title, payment.transaction.book.author, `${payment.amount} NOK`, payment.processedBy || "N/A", payment.notes || "-"]);
+			const tableData = filteredPayments.map((payment, index) => [index + 1, formatDateTime(payment.paidAt), payment.User.name || "N/A", payment.User.email, payment.Transaction.Book.title, payment.Transaction.Book.author, `${payment.amount} NOK`, payment.processedBy || "N/A", payment.notes || "-"]);
 
 			autoTable(doc, {
 				head: headers,
@@ -772,10 +784,10 @@ export default function ReportsPage() {
 								<tr key={payment.id}>
 									<td>{i + 1}</td>
 									<td>{formatDateTime(payment.paidAt)}</td>
-									<td>{payment.user.name || "N/A"}</td>
-									<td>{payment.user.email}</td>
-									<td>{payment.transaction.book.title}</td>
-									<td>{payment.transaction.book.author}</td>
+									<td>{payment.User.name || "N/A"}</td>
+									<td>{payment.User.email}</td>
+									<td>{payment.Transaction.Book.title}</td>
+									<td>{payment.Transaction.Book.author}</td>
 									<td>{payment.amount}</td>
 									<td>{payment.processedBy || "N/A"}</td>
 									<td>{payment.notes || "-"}</td>

@@ -371,40 +371,96 @@ export default function AdminUsersPage() {
 
 			{/* Modal for Add/Edit User - Always available */}
 			{showModal && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-					<div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-						<h2 className="text-xl font-bold mb-4">{modalMode === "add" ? "Add New User" : "Edit User"}</h2>
-						<form onSubmit={handleSubmit} className="flex flex-col gap-3">
-							<input type="text" placeholder="Name" value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} className="border p-2 rounded" required />
-							<input type="email" placeholder="Email" value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} className={`border p-2 rounded ${modalMode === "edit" ? "bg-gray-100 cursor-not-allowed" : ""}`} disabled={modalMode === "edit"} required={modalMode === "add"} />
-							{modalMode === "add" && <input type="password" placeholder="Password" value={form.password || ""} onChange={(e) => setForm({ ...form, password: e.target.value })} className="border p-2 rounded" required />}
-							<input type="text" placeholder="Phone" value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="border p-2 rounded" />
-							<input type="text" placeholder="City" value={form.city || ""} onChange={(e) => setForm({ ...form, city: e.target.value })} className="border p-2 rounded" />
-							<input type="text" placeholder="Postal Code" value={form.postalCode || ""} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} className="border p-2 rounded" />
-							<input type="text" placeholder="Address" value={form.address || ""} onChange={(e) => setForm({ ...form, address: e.target.value })} className="border p-2 rounded" />
-							<PhotoUpload photo={form.photo || ""} setPhoto={(photo) => setForm({ ...form, photo })} />
-							<label className="flex items-center gap-2">
-								<span>Role:</span>
-								<select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="border p-2 rounded">
-									<option value="ADMIN">ADMIN</option>
-									<option value="STUDENT">STUDENT</option>
-								</select>
-							</label>
-							{modalMode === "edit" && (
-								<label className="flex items-center gap-2">
-									<span>Verified:</span>
-									<select value={form.verifiedUser || "No"} onChange={(e) => setForm({ ...form, verifiedUser: e.target.value })} className="border p-2 rounded">
-										<option value="No">No</option>
-										<option value="Yes">Yes</option>
-									</select>
-								</label>
-							)}
-							<div className="flex gap-2 mt-4">
-								<button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
-									{modalMode === "add" ? "Create User" : "Update User"}
-								</button>
-								<button type="button" onClick={() => setShowModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded shadow">
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 overflow-y-auto">
+					<div className="bg-white rounded-xl shadow-xl w-full max-w-2xl my-8">
+						<div className="p-6 border-b border-gray-100">
+							<h2 className="text-xl font-bold text-gray-900">{modalMode === "add" ? "Add New User" : "Edit User"}</h2>
+						</div>
+
+						<form onSubmit={handleSubmit} className="p-6">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+								{/* Left Column - Personal Info */}
+								<div className="space-y-4">
+									<h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Personal Information</h3>
+
+									<div>
+										<label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+										<input type="text" placeholder="John Doe" value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" required />
+									</div>
+
+									<div>
+										<label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+										<input type="email" placeholder="john@example.com" value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} className={`w-full border border-gray-300 p-2 rounded-lg outline-none transition ${modalMode === "edit" ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"}`} disabled={modalMode === "edit"} required={modalMode === "add"} />
+									</div>
+
+									{modalMode === "add" && (
+										<div>
+											<label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+											<input type="password" placeholder="••••••••" value={form.password || ""} onChange={(e) => setForm({ ...form, password: e.target.value })} className="w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" required />
+										</div>
+									)}
+
+									<div>
+										<label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+										<input type="text" placeholder="+1 234 567 890" value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" />
+									</div>
+
+									<div className="pt-2">
+										<label className="block text-sm font-medium text-gray-700 mb-2">Role & Status</label>
+										<div className="grid grid-cols-2 gap-4">
+											<label className="flex flex-col gap-1">
+												<span className="text-xs text-gray-500">Role</span>
+												<select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+													<option value="ADMIN">Admin</option>
+													<option value="STUDENT">Student</option>
+												</select>
+											</label>
+
+											{modalMode === "edit" && (
+												<label className="flex flex-col gap-1">
+													<span className="text-xs text-gray-500">Verified</span>
+													<select value={form.verifiedUser || "No"} onChange={(e) => setForm({ ...form, verifiedUser: e.target.value })} className="border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+														<option value="No">No</option>
+														<option value="Yes">Yes</option>
+													</select>
+												</label>
+											)}
+										</div>
+									</div>
+								</div>
+
+								{/* Right Column - Address & Photo */}
+								<div className="space-y-4">
+									<h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Address & Photo</h3>
+
+									<div className="grid grid-cols-2 gap-4">
+										<div>
+											<label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+											<input type="text" placeholder="New York" value={form.city || ""} onChange={(e) => setForm({ ...form, city: e.target.value })} className="w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" />
+										</div>
+										<div>
+											<label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
+											<input type="text" placeholder="10001" value={form.postalCode || ""} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} className="w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" />
+										</div>
+									</div>
+
+									<div>
+										<label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+										<input type="text" placeholder="123 Main St, Apt 4B" value={form.address || ""} onChange={(e) => setForm({ ...form, address: e.target.value })} className="w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" />
+									</div>
+
+									<div className="pt-2">
+										<PhotoUpload photo={form.photo || ""} setPhoto={(photo) => setForm({ ...form, photo })} />
+									</div>
+								</div>
+							</div>
+
+							<div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-100">
+								<button type="button" onClick={() => setShowModal(false)} className="px-5 py-2.5 rounded-lg text-gray-700 font-medium border border-gray-300 hover:bg-gray-50 transition-colors">
 									Cancel
+								</button>
+								<button type="submit" className="px-5 py-2.5 rounded-lg text-white font-medium bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5">
+									{modalMode === "add" ? "Create User" : "Save Changes"}
 								</button>
 							</div>
 						</form>
@@ -587,9 +643,9 @@ function TransactionCard({ transaction, isActive }) {
 		<div className={`border rounded-lg p-4 ${isOverdue ? "border-red-200 bg-red-50" : "border-gray-200 bg-gray-50"}`}>
 			<div className="flex items-center justify-between">
 				<div className="flex-1">
-					<h4 className="font-medium text-gray-900">{transaction.book.title}</h4>
-					<p className="text-sm text-gray-600">by {transaction.book.author}</p>
-					{transaction.book.isbn && <p className="text-xs text-gray-500 font-mono">ISBN: {transaction.book.isbn}</p>}
+					<h4 className="font-medium text-gray-900">{transaction.Book.title}</h4>
+					<p className="text-sm text-gray-600">by {transaction.Book.author}</p>
+					{transaction.Book.isbn && <p className="text-xs text-gray-500 font-mono">ISBN: {transaction.Book.isbn}</p>}
 				</div>
 				<div className="text-right">
 					<div className="flex items-center gap-2 mb-1">

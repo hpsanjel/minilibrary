@@ -23,9 +23,15 @@ export default function SearchResultsPage() {
 		try {
 			const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
 			const data = await response.json();
-			setResults(data);
+			if (data.error) {
+				console.error("Search API error:", data.error);
+				setResults({ users: [], books: [], query: searchQuery });
+			} else {
+				setResults(data);
+			}
 		} catch (error) {
 			console.error("Search failed:", error);
+			setResults({ users: [], books: [], query: searchQuery });
 		} finally {
 			setLoading(false);
 		}
@@ -217,8 +223,8 @@ function UserCard({ user }) {
 							{user.activeTransactions.slice(0, 3).map((transaction) => (
 								<div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
 									<div className="flex-1 min-w-0">
-										<div className="font-medium text-gray-900 truncate">{transaction.book.title}</div>
-										<div className="text-sm text-gray-600">by {transaction.book.author}</div>
+										<div className="font-medium text-gray-900 truncate">{transaction.Book.title}</div>
+										<div className="text-sm text-gray-600">by {transaction.Book.author}</div>
 									</div>
 									<div className="text-right">
 										<div className="text-sm text-gray-600">Issued: {new Date(transaction.createdAt).toLocaleDateString()}</div>
@@ -240,7 +246,7 @@ function UserCard({ user }) {
 						Issue Book
 					</button>
 					{user.currentlyBorrowedBooks > 0 && (
-						<button onClick={() => router.push(`/admin/returns?userId=${user.id}`)} className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm">
+						<button onClick={() => router.push(`/admin/transactions?userId=${user.id}&filter=borrowed`)} className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm">
 							Return Book
 						</button>
 					)}
@@ -288,7 +294,7 @@ function BookCard({ book }) {
 						</h4>
 						<div className="space-y-2">
 							{book.borrowedBy.map((user, index) => {
-								const transaction = book.activeTransactions.find((trans) => trans.user.id === user.id);
+								const transaction = book.activeTransactions.find((trans) => trans.User.id === user.id);
 								return (
 									<div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
 										<div className="flex items-center gap-3 flex-1 min-w-0">

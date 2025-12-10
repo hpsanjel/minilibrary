@@ -47,27 +47,53 @@ model Transaction {
 }
 
 model User {
-  id                        Int           @id @default(autoincrement())
-  membershipNumber          String?       @unique
+  id                        Int            @id @default(autoincrement())
+  membershipNumber          String?        @unique
   name                      String?
-  email                     String        @unique
+  email                     String         @unique
   password                  String
   phone                     String?
   city                      String?
   postalCode                String?
   address                   String?
   photo                     String?
-  role                      Role          @default(STUDENT)
-  verifiedUser              String        @default("No")
+  role                      Role           @default(STUDENT)
+  verifiedUser              String         @default("No")
   verificationToken         String?
-  verificationTokenExpires  DateTime?     @db.Timestamp(6)
+  verificationTokenExpires  DateTime?      @db.Timestamp(6)
   passwordResetToken        String?
-  passwordResetTokenExpires DateTime?     @db.Timestamp(6)
+  passwordResetTokenExpires DateTime?      @db.Timestamp(6)
   FinePayment               FinePayment[]
   Transaction               Transaction[]
+  Notification              Notification[]
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  actionUrl String?
+  metadata  Json?
+  createdAt DateTime         @default(now()) @db.Timestamp(6)
+  User      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([createdAt])
 }
 
 enum Role {
   ADMIN
   STUDENT
+}
+
+enum NotificationType {
+  BOOK_ISSUED
+  BOOK_DUE_SOON
+  BOOK_OVERDUE
+  BOOK_RETURNED
+  FINE_CLEARED
+  BOOK_AVAILABLE
 }

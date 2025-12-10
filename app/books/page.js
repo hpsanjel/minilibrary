@@ -3,18 +3,36 @@ import prisma from "@/lib/prisma";
 
 export default async function BooksPage() {
 	try {
-		console.log("BooksPage: Fetching books from database...");
-		const booksData = await prisma.book.findMany();
+		const booksData = await prisma.book.findMany({
+			include: {
+				Transaction: {
+					where: { returned: false },
+				},
+			},
+			orderBy: { title: "asc" },
+		});
 		console.log(`BooksPage: Successfully fetched ${booksData.length} books`);
 
-		// Serialize the data to avoid Next.js serialization errors
-		// This converts any special types (Date, BigInt, etc.) to plain JSON
-		const books = JSON.parse(JSON.stringify(booksData));
-		console.log("BooksPage: Data serialized successfully");
+		// Calculate availability and serialize
+		const books = booksData.map((book) => {
+			const borrowedCount = book.Transaction.length;
+			const availableCopies = book.copies - borrowedCount;
+
+			return {
+				...book,
+				Transaction: undefined, // Remove transactions to keep payload light
+				available: book.available && availableCopies > 0,
+				availableCopiesCount: availableCopies, // Useful for display
+			};
+		});
+
+		// Serialize to plain JSON
+		const serializedBooks = JSON.parse(JSON.stringify(books));
+		console.log("BooksPage: Data processed and serialized successfully");
 
 		return (
 			<div className="max-w-4xl mx-auto">
-				<BooksPageClient books={books} />
+				<BooksPageClient books={serializedBooks} />
 			</div>
 		);
 	} catch (error) {

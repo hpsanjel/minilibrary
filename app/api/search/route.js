@@ -18,9 +18,9 @@ export async function GET(request) {
 				OR: [{ name: { contains: searchTerm, mode: "insensitive" } }, { email: { contains: searchTerm, mode: "insensitive" } }, { membershipNumber: { contains: searchTerm, mode: "insensitive" } }, { phone: { contains: searchTerm, mode: "insensitive" } }],
 			},
 			include: {
-				transactions: {
+				Transaction: {
 					include: {
-						book: true,
+						Book: true,
 					},
 					orderBy: {
 						createdAt: "desc",
@@ -35,9 +35,9 @@ export async function GET(request) {
 				OR: [{ title: { contains: searchTerm, mode: "insensitive" } }, { author: { contains: searchTerm, mode: "insensitive" } }, { isbn: { contains: searchTerm, mode: "insensitive" } }],
 			},
 			include: {
-				transactions: {
+				Transaction: {
 					include: {
-						user: true,
+						User: true,
 					},
 					orderBy: {
 						createdAt: "desc",
@@ -48,9 +48,9 @@ export async function GET(request) {
 
 		// Calculate additional user data
 		const enrichedUsers = users.map((user) => {
-			const activeTransactions = user.transactions.filter((transaction) => !transaction.returned);
-			const totalFines = user.transactions.filter((tx) => tx.fine > 0).reduce((sum, tx) => sum + tx.fine, 0);
-			const totalBorrowed = user.transactions.length;
+			const activeTransactions = (user.Transaction || []).filter((transaction) => !transaction.returned);
+			const totalFines = (user.Transaction || []).filter((tx) => tx.fine > 0).reduce((sum, tx) => sum + tx.fine, 0);
+			const totalBorrowed = (user.Transaction || []).length;
 
 			return {
 				...user,
@@ -63,10 +63,10 @@ export async function GET(request) {
 
 		// Calculate additional book data
 		const enrichedBooks = books.map((book) => {
-			const activeTransactions = book.transactions.filter((transaction) => !transaction.returned);
+			const activeTransactions = (book.Transaction || []).filter((transaction) => !transaction.returned);
 			const totalCopies = book.copies || 1;
 			const availableCopies = totalCopies - activeTransactions.length;
-			const borrowedBy = activeTransactions.map((transaction) => transaction.user);
+			const borrowedBy = activeTransactions.map((transaction) => transaction.User);
 
 			return {
 				...book,

@@ -14,9 +14,9 @@ export async function GET(request) {
 		const book = await prisma.book.findUnique({
 			where: { id: parseInt(bookId) },
 			include: {
-				transactions: {
+				Transaction: {
 					include: {
-						user: true,
+						User: true,
 					},
 					orderBy: {
 						createdAt: "desc",
@@ -30,7 +30,7 @@ export async function GET(request) {
 		}
 
 		// Calculate availability
-		const activeTransactions = book.transactions.filter((t) => !t.returned);
+		const activeTransactions = book.Transaction.filter((t) => !t.returned);
 		const availableCopies = book.copies - activeTransactions.length;
 
 		return new Response(
@@ -51,7 +51,7 @@ export async function GET(request) {
 				copies: true,
 				available: true, // include available field
 				coverUrl: true, // include cover URL
-				transactions: {
+				Transaction: {
 					where: {
 						returned: false, // only count unreturned books
 					},
@@ -64,7 +64,7 @@ export async function GET(request) {
 
 		// Calculate available copies for each book and return complete book data
 		const booksWithAvailable = books.map((book) => {
-			const borrowedCount = book.transactions.length;
+			const borrowedCount = book.Transaction.length;
 			const availableCopies = book.copies - borrowedCount;
 
 			return {

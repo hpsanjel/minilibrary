@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Html5QrcodeScanner } from "html5-qrcode";
 
 export default function AdminIssuePage() {
@@ -20,23 +21,48 @@ export default function AdminIssuePage() {
 	const userScannerRef = useRef(null);
 	const bookScannerRef = useRef(null);
 
+	const searchParams = useSearchParams();
+	const userIdParam = searchParams.get("userId");
+	const bookIdParam = searchParams.get("bookId");
+
 	useEffect(() => {
-		fetch("/api/users")
-			.then((res) => res.json())
-			.then((data) => setUsers(data));
-		fetch("/api/books")
-			.then((res) => res.json())
-			.then((data) => {
-				// Filter books that have available copies
-				const availableBooks = data.filter((b) => {
-					// Extract available count from "X of Y available" format
-					const match = b.availableCopies?.match(/^(\d+) of \d+ available$/);
-					const availableCount = match ? parseInt(match[1]) : 0;
-					return availableCount > 0;
-				});
-				setBooks(availableBooks);
+		Promise.all([
+			fetch("/api/users").then((res) => res.json()),
+			fetch("/api/books").then((res) => res.json())
+		]).then(([usersData, booksData]) => {
+			setUsers(usersData);
+
+			// Filter books that have available copies
+			const availableBooks = booksData.filter((b) => {
+				// Extract available count from "X of Y available" format
+				const match = b.availableCopies?.match(/^(\d+) of \d+ available$/);
+				const availableCount = match ? parseInt(match[1]) : 0;
+				return availableCount > 0;
 			});
-	}, []);
+			setBooks(availableBooks);
+
+			// Pre-select user if userIdParam exists
+			if (userIdParam) {
+				const user = usersData.find(u => u.id === parseInt(userIdParam));
+				if (user) {
+					setSelectedUser(user);
+					setUserQuery(user.name ? `${user.name} (${user.email})` : user.email);
+				}
+			}
+
+			// Pre-select book if bookIdParam exists
+			if (bookIdParam) {
+				const book = booksData.find(b => b.id === parseInt(bookIdParam));
+				if (book) {
+					// Check if book is available, if not, still select it but maybe warn?
+					// For now, just select it even if not in availableBooks (to show it)
+					// But we should probably use booksData to find it
+					setSelectedBook(book);
+					setBookQuery(`${book.title} by ${book.author}`);
+				}
+			}
+		});
+	}, [userIdParam, bookIdParam]);
 
 	// Cleanup scanners on unmount
 	useEffect(() => {

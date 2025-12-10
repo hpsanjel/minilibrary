@@ -89,22 +89,24 @@ export default function BooksUserTabs() {
 					currentPassword: "",
 					message: "Password change link has been sent to your email. Please check your inbox.",
 					messageType: "success",
+					isSubmitting: false,
 				}));
 			} else {
 				setPasswordForm((prev) => ({
 					...prev,
 					message: result.error || "Failed to request password change",
 					messageType: "error",
+					isSubmitting: false,
 				}));
 			}
 		} catch (error) {
+			console.error("Password change error:", error);
 			setPasswordForm((prev) => ({
 				...prev,
 				message: "Network error. Please try again.",
 				messageType: "error",
+				isSubmitting: false,
 			}));
-		} finally {
-			setPasswordForm((prev) => ({ ...prev, isSubmitting: false }));
 		}
 	};
 
@@ -206,7 +208,7 @@ export default function BooksUserTabs() {
 							.filter((t) => !t.returned)
 							.map((t) => (
 								<tr key={t.id}>
-									<td className="px-4 py-2">{t.book?.title || "-"}</td>
+									<td className="px-4 py-2">{t.Book?.title || "-"}</td>
 									<td className="px-4 py-2">{new Date(t.createdAt).toLocaleDateString()}</td>
 									<td className="px-4 py-2">{t.deadline ? new Date(t.deadline).toLocaleDateString() : "-"}</td>
 									<td className="px-4 py-2">{t.fine || 0}</td>
@@ -241,7 +243,7 @@ export default function BooksUserTabs() {
 							.filter((t) => t.returned)
 							.map((t) => (
 								<tr key={t.id}>
-									<td className="px-4 py-2">{t.book?.title || "-"}</td>
+									<td className="px-4 py-2">{t.Book?.title || "-"}</td>
 									<td className="px-4 py-2">{t.returnedAt ? new Date(t.returnedAt).toLocaleDateString() : "-"}</td>
 									<td className="px-4 py-2">{t.fine || 0}</td>
 								</tr>
@@ -276,7 +278,7 @@ export default function BooksUserTabs() {
 							.filter((t) => t.fine && t.fine > 0)
 							.map((t) => (
 								<tr key={t.id}>
-									<td className="px-4 py-2">{t.book?.title || "-"}</td>
+									<td className="px-4 py-2">{t.Book?.title || "-"}</td>
 									<td className="px-4 py-2">{t.fine}</td>
 									<td className="px-4 py-2">{t.deadline ? new Date(t.deadline).toLocaleDateString() : "-"}</td>
 									<td className="px-4 py-2">{t.returnedAt ? new Date(t.returnedAt).toLocaleDateString() : "-"}</td>

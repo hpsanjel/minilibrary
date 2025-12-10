@@ -1,12 +1,16 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import AdminSidebar from "@/components/AdminSidebar";
 import ConfirmationModal from "@/components/ConfirmationModal.jsx";
 
 export default function AdminTransactionsPage() {
+	const searchParams = useSearchParams();
+	const userIdParam = searchParams.get("userId");
+	const filterParam = searchParams.get("filter");
 	const [transactions, setTransactions] = useState([]);
 	const [loading, setLoading] = useState(true);
-	const [filter, setFilter] = useState("all");
+	const [filter, setFilter] = useState(filterParam || "all");
 	const [showFineModal, setShowFineModal] = useState(false);
 	const [pendingIssueTx, setPendingIssueTx] = useState(null);
 	const [showClearFineModal, setShowClearFineModal] = useState(false);
@@ -103,7 +107,7 @@ export default function AdminTransactionsPage() {
 						transactionId: transactionId,
 						userId: pendingReturnTx.userId,
 						amount: currentFine,
-						reason: `Fine cleared for overdue book: ${pendingReturnTx.book.title}`,
+						reason: `Fine cleared for overdue book: ${pendingReturnTx.Book.title}`,
 						clearedBy: "admin", // You might want to get actual admin user info
 					}),
 				});
@@ -246,7 +250,7 @@ export default function AdminTransactionsPage() {
 		transactions.forEach((tx) => {
 			if (!available[tx.bookId]) {
 				const borrowedCount = bookCounts[tx.bookId] || 0;
-				available[tx.bookId] = Math.max(0, (tx.book.copies || 1) - borrowedCount);
+				available[tx.bookId] = Math.max(0, (tx.Book.copies || 1) - borrowedCount);
 			}
 		});
 
@@ -255,11 +259,17 @@ export default function AdminTransactionsPage() {
 
 	// Filtered transactions based on filter state
 	const filteredTransactions = useMemo(() => {
-		if (filter === "all") return transactions;
-		if (filter === "borrowed") return transactions.filter((tx) => !tx.returned);
-		if (filter === "returned") return transactions.filter((tx) => tx.returned);
-		return transactions;
-	}, [transactions, filter]);
+		let result = transactions;
+
+		if (userIdParam) {
+			result = result.filter(tx => tx.userId === parseInt(userIdParam));
+		}
+
+		if (filter === "all") return result;
+		if (filter === "borrowed") return result.filter((tx) => !tx.returned);
+		if (filter === "returned") return result.filter((tx) => tx.returned);
+		return result;
+	}, [transactions, filter, userIdParam]);
 
 	return (
 		<div className="flex min-h-screen">
@@ -323,17 +333,17 @@ export default function AdminTransactionsPage() {
 										<tr key={tx.id} className={isOverdue ? "bg-red-50" : ""}>
 											<td className="px-6 py-4 whitespace-nowrap">
 												<div className="flex flex-col">
-													<div className="text-sm font-medium text-gray-900">{tx.user.name}</div>
-													<div className="text-sm text-gray-500">{tx.user.email}</div>
-													<div className="text-sm text-gray-500">Phone: {tx.user.phone || "N/A"}</div>
-													<div className="text-sm text-gray-500">Address: {tx.user.address || "N/A"}</div>
+													<div className="text-sm font-medium text-gray-900">{tx.User.name}</div>
+													<div className="text-sm text-gray-500">{tx.User.email}</div>
+													<div className="text-sm text-gray-500">Phone: {tx.User.phone || "N/A"}</div>
+													<div className="text-sm text-gray-500">Address: {tx.User.address || "N/A"}</div>
 													<div className="text-xs text-blue-600">Books borrowed: {activeBorrowCount[tx.userId] || 0}</div>
 												</div>
 											</td>
 											<td className="px-6 py-4 whitespace-nowrap">
-												<div className="text-sm font-medium text-gray-900">{tx.book.title}</div>
-												<div className="text-sm text-gray-500">by {tx.book.author}</div>
-												<div className="text-sm text-gray-500">ISBN: {tx.book.isbn}</div>
+												<div className="text-sm font-medium text-gray-900">{tx.Book.title}</div>
+												<div className="text-sm text-gray-500">by {tx.Book.author}</div>
+												<div className="text-sm text-gray-500">ISBN: {tx.Book.isbn}</div>
 											</td>
 											{/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{new Date(tx.createdAt).toLocaleDateString()}</td> */}
 											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{new Date(tx.deadline).toLocaleDateString()}</td>
@@ -581,7 +591,7 @@ export default function AdminTransactionsPage() {
 						return (
 							<>
 								<div>
-									<strong>Book:</strong> {pendingIssueTx.book.title}
+									<strong>Book:</strong> {pendingIssueTx.Book.title}
 								</div>
 								<div>
 									<strong>Deadline:</strong> {new Date(pendingIssueTx.deadline).toLocaleDateString()}
@@ -620,10 +630,10 @@ export default function AdminTransactionsPage() {
 					message={
 						<>
 							<div>
-								<strong>User:</strong> {pendingClearFineTx.user.name}
+								<strong>User:</strong> {pendingClearFineTx.User.name}
 							</div>
 							<div>
-								<strong>Book:</strong> {pendingClearFineTx.book.title}
+								<strong>Book:</strong> {pendingClearFineTx.Book.title}
 							</div>
 							<div>
 								<strong>Fine:</strong> {pendingClearFineTx.currentFine || pendingClearFineTx.fine} NOK
@@ -673,10 +683,10 @@ export default function AdminTransactionsPage() {
 								</div>
 								<div className="space-y-2 text-sm">
 									<div>
-										<strong>Student:</strong> {pendingReturnTx.user.name}
+										<strong>Student:</strong> {pendingReturnTx.User.name}
 									</div>
 									<div>
-										<strong>Book:</strong> {pendingReturnTx.book.title}
+										<strong>Book:</strong> {pendingReturnTx.Book.title}
 									</div>
 									<div>
 										<strong>Deadline:</strong> {new Date(pendingReturnTx.deadline).toLocaleDateString()}

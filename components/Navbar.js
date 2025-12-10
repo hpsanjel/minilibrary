@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
 import { Search, Bell, Menu, X, BookOpen, Library, User } from "lucide-react";
+import NotificationDropdown from "@/components/NotificationDropdown";
 
 export default function Navbar() {
 	const { data: session } = useSession();
@@ -73,12 +74,7 @@ export default function Navbar() {
 						{/* Desktop Navigation */}
 						{session && (
 							<div className="hidden md:flex items-center gap-6">
-								{session.user.role === "USER" && (
-									<Link href="/my-books" className="flex items-center gap-1 hover:text-blue-400 transition">
-										<BookOpen className="w-4 h-4" />
-										My Books
-									</Link>
-								)}
+								{/* Add other desktop links here if needed */}
 							</div>
 						)}
 
@@ -86,18 +82,13 @@ export default function Navbar() {
 						<div className="flex items-center gap-3">
 							{/* Search */}
 							{session && (
-								<button onClick={() => setSearchOpen(true)} className="hidden sm:flex p-2 hover:bg-gray-700 rounded-full transition" aria-label="Search books">
+								<button onClick={() => setSearchOpen(true)} className="p-2 hover:bg-gray-700 rounded-full transition" aria-label="Search books">
 									<Search className="w-5 h-5" />
 								</button>
 							)}
 
 							{/* Notifications */}
-							{session && (
-								<button className="hidden sm:flex p-2 hover:bg-gray-700 rounded-full transition relative" aria-label="Notifications">
-									<Bell className="w-5 h-5" />
-									<span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-								</button>
-							)}
+							{session && <NotificationDropdown session={session} />}
 
 							{/* Mobile Menu Button */}
 							<button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 hover:bg-gray-700 rounded transition" aria-label="Menu">
@@ -126,7 +117,7 @@ export default function Navbar() {
 													<User className="w-4 h-4" />
 													My Profile
 												</Link>
-												{session.user.role === "USER" && (
+												{session.user.role === "STUDENT" && (
 													<Link href="/my-books" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition">
 														<BookOpen className="w-4 h-4" />
 														My Books
@@ -158,7 +149,7 @@ export default function Navbar() {
 				{mobileMenuOpen && session && (
 					<div className="md:hidden bg-gray-800 border-t border-gray-700">
 						<div className="px-4 py-3 space-y-2">
-							{session.user.role === "USER" && (
+							{session.user.role === "STUDENT" && (
 								<Link href="/my-books" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700 transition">
 									<BookOpen className="w-4 h-4" />
 									My Books
@@ -195,26 +186,31 @@ export default function Navbar() {
 // Search Modal Component
 function SearchModal({ onClose }) {
 	const [searchQuery, setSearchQuery] = useState("");
-	const [results, setResults] = useState([]);
+	const [results, setResults] = useState({ users: [], books: [] });
 	const [loading, setLoading] = useState(false);
 	const router = useRouter();
 	const { data: session } = useSession();
 	const timeoutRef = useRef(null);
 
-	const searchBooks = async (query) => {
+	const searchLibrary = async (query) => {
 		if (query.length < 2) {
-			setResults([]);
+			setResults({ users: [], books: [] });
 			return;
 		}
 
 		setLoading(true);
 		try {
-			const res = await fetch(`/api/books`);
-			const books = await res.json();
-			const filtered = books.filter(
-				(book) => book.title.toLowerCase().includes(query.toLowerCase()) || book.author.toLowerCase().includes(query.toLowerCase()) || (book.isbn && book.isbn.toLowerCase().includes(query.toLowerCase()))
-			);
-			setResults(filtered.slice(0, 5));
+			const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+			const data = await res.json();
+			if (data.error) {
+				console.error("Search error:", data.error);
+				setResults({ users: [], books: [] });
+			} else {
+				setResults({
+					users: data.users || [],
+					books: data.books || []
+				});
+			}
 		} catch (error) {
 			console.error("Search failed:", error);
 		} finally {
@@ -231,32 +227,51 @@ function SearchModal({ onClose }) {
 		}
 
 		timeoutRef.current = setTimeout(() => {
-			searchBooks(value);
+			searchLibrary(value);
 		}, 300);
 	};
 
 	const handleBookClick = (bookId) => {
-		router.push(`/books?bookId=${bookId}`);
-		onClose();
-	};
-
-	const handleQuickAction = (action, bookId) => {
-		if (action === 'issue') {
-			router.push(`/admin/issue?bookId=${bookId}`);
-		} else if (action === 'edit') {
+		if (session?.user?.role === "ADMIN") {
 			router.push(`/admin/books?id=${bookId}`);
+		} else {
+			router.push(`/books?bookId=${bookId}`);
 		}
 		onClose();
 	};
 
+	const handleUserClick = (userId) => {
+		router.push(`/admin/users?id=${userId}`);
+		onClose();
+	};
+
+	const handleQuickAction = (action, id, type) => {
+		if (type === 'book') {
+			if (action === 'issue') {
+				router.push(`/admin/issue?bookId=${id}`);
+			} else if (action === 'edit') {
+				router.push(`/admin/books?id=${id}`);
+			}
+		} else if (type === 'user') {
+			if (action === 'details') {
+				router.push(`/admin/users?id=${id}`);
+			} else if (action === 'issue') {
+				router.push(`/admin/issue?userId=${id}`);
+			}
+		}
+		onClose();
+	};
+
+	const hasResults = results.books.length > 0 || (session?.user?.role === "ADMIN" && results.users.length > 0);
+
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center pt-20 px-4" onClick={onClose}>
-			<div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
-				<div className="p-4 border-b">
+		<div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center sm:pt-20 sm:px-4" onClick={onClose}>
+			<div className="bg-white w-full h-full sm:h-auto sm:max-h-[80vh] sm:rounded-lg shadow-2xl sm:max-w-2xl animate-fade-in flex flex-col" onClick={(e) => e.stopPropagation()}>
+				<div className="p-4 border-b flex-shrink-0">
 					<div className="flex items-center justify-between mb-2">
 						<h3 className="text-lg font-semibold text-gray-900">Search Library</h3>
 						<div className="flex items-center gap-2">
-							<kbd className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded">Esc</kbd>
+							<kbd className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded hidden sm:inline-block">Esc</kbd>
 							<button onClick={onClose} className="p-1 hover:bg-gray-100 rounded transition">
 								<X className="w-5 h-5 text-gray-500" />
 							</button>
@@ -264,108 +279,106 @@ function SearchModal({ onClose }) {
 					</div>
 					<div className="relative">
 						<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-						<input type="text" placeholder="Search by title, author, or ISBN..." value={searchQuery} onChange={handleInputChange} autoFocus className="w-full pl-10 pr-4 py-3 border-0 focus:outline-none text-gray-900 placeholder-gray-400" />
+						<input type="text" placeholder="Search by title, author, ISBN, or user..." value={searchQuery} onChange={handleInputChange} autoFocus className="w-full pl-10 pr-4 py-3 border-0 focus:outline-none text-gray-900 placeholder-gray-400" />
 					</div>
 				</div>
 
-				{loading && (
-					<div className="p-8 text-center">
-						<div className="animate-spin inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-						<p className="mt-2 text-sm text-gray-500">Searching...</p>
-					</div>
-				)}
-
-				{!loading && searchQuery.length >= 2 && results.length === 0 && (
-					<div className="p-8 text-center">
-						<BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-						<p className="text-gray-500">No books found for "{searchQuery}"</p>
-					</div>
-				)}
-
-				{!loading && results.length > 0 && (
-					<div className="max-h-96 overflow-y-auto">
-						{results.map((book) => (
-							<div key={book.id} className="p-4 hover:bg-gray-50 flex items-start gap-4 border-t transition">
-								<button onClick={() => handleBookClick(book.id)} className="flex-shrink-0">
-									{book.coverUrl ? (
-										<img src={book.coverUrl} alt={book.title} className="w-12 h-16 object-cover rounded border hover:shadow-lg transition" />
-									) : (
-										<div className="w-12 h-16 bg-blue-100 rounded flex items-center justify-center hover:bg-blue-200 transition">
-											<BookOpen className="w-6 h-6 text-blue-600" />
-										</div>
-									)}
-								</button>
-								<div className="flex-1 min-w-0">
-									<button onClick={() => handleBookClick(book.id)} className="text-left w-full">
-										<h4 className="font-medium text-gray-900 truncate hover:text-blue-600 transition">{book.title}</h4>
-										<p className="text-sm text-gray-600 truncate">by {book.author}</p>
-										<div className="flex items-center gap-2 mt-1">
-											{book.isbn && <span className="text-xs text-gray-500">ISBN: {book.isbn}</span>}
-											<span className={`text-xs px-2 py-0.5 rounded-full ${book.available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{book.available ? "Available" : "Borrowed"}</span>
-										</div>
-									</button>
-									{/* Quick Actions */}
-									<div className="flex gap-2 mt-2">
-										{session?.user?.role === "ADMIN" ? (
-											<>
-												<button
-													onClick={() => handleQuickAction('issue', book.id)}
-													className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-													disabled={!book.available}
-												>
-													Issue Book
-												</button>
-												<button
-													onClick={() => handleQuickAction('edit', book.id)}
-													className="text-xs px-3 py-1 border border-gray-300 text-gray-700 rounded hover:bg-gray-100 transition"
-												>
-													Edit
-												</button>
-											</>
-										) : (
-											<>
-												<button
-													onClick={() => handleBookClick(book.id)}
-													className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-												>
-													View Details
-												</button>
-												{book.available && (
-													<button
-														onClick={() => handleBookClick(book.id)}
-														className="text-xs px-3 py-1 border border-blue-600 text-blue-600 rounded hover:bg-blue-50 transition"
-													>
-														Borrow
-													</button>
-												)}
-											</>
-										)}
-									</div>
-								</div>
-							</div>
-						))}
-						<div className="p-3 bg-gray-50 border-t text-center">
-							<button
-								onClick={() => {
-									router.push("/books");
-									onClose();
-								}}
-								className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-							>
-								View all books →
-							</button>
+				<div className="overflow-y-auto flex-1">
+					{loading && (
+						<div className="p-8 text-center">
+							<div className="animate-spin inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+							<p className="mt-2 text-sm text-gray-500">Searching...</p>
 						</div>
-					</div>
-				)}
+					)}
 
-				{searchQuery.length < 2 && (
-					<div className="p-8 text-center">
-						<Search className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-						<p className="text-gray-500 text-sm">Start typing to search books...</p>
-						<p className="text-gray-400 text-xs mt-1">Search by title, author, or ISBN</p>
-						<p className="text-gray-400 text-xs mt-2">
-							<kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs">Cmd/Ctrl + K</kbd> to open search
-						</p>
+					{!loading && searchQuery.length >= 2 && !hasResults && (
+						<div className="p-8 text-center">
+							<BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+							<p className="text-gray-500">No results found for &quot;{searchQuery}&quot;</p>
+						</div>
+					)}
+
+					{!loading && hasResults && (
+						<div className="divide-y divide-gray-100">
+							{/* Users Section - Admin Only */}
+							{session?.user?.role === "ADMIN" && results.users.length > 0 && (
+								<div>
+									<h4 className="px-4 py-2 text-xs font-bold text-gray-500 uppercase bg-gray-50 sticky top-0">Users</h4>
+									{results.users.map((user) => (
+										<div key={user.id} className="p-4 hover:bg-gray-50 flex items-center gap-4 transition cursor-pointer" onClick={() => handleUserClick(user.id)}>
+											<div className="flex-shrink-0">
+												{user.photo ? (
+													<img src={user.photo} alt={user.name} className="w-10 h-10 rounded-full object-cover border" />
+												) : (
+													<div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+														<User className="w-5 h-5 text-blue-600" />
+													</div>
+												)}
+											</div>
+											<div className="flex-1 min-w-0">
+												<h4 className="font-medium text-gray-900 truncate">{user.name}</h4>
+												<p className="text-sm text-gray-500 truncate">{user.email}</p>
+												<div className="flex items-center gap-2 mt-1">
+													<span className="text-xs text-gray-400">ID: {user.membershipNumber || user.id}</span>
+													<span className={`text-xs px-2 py-0.5 rounded-full ${user.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>{user.role}</span>
+												</div>
+											</div>
+											<button
+												onClick={(e) => { e.stopPropagation(); handleQuickAction('issue', user.id, 'user'); }}
+												className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition"
+											>
+												Issue Book
+											</button>
+										</div>
+									))}
+								</div>
+							)}
+
+							{/* Books Section */}
+							{results.books.length > 0 && (
+								<div>
+									<h4 className="px-4 py-2 text-xs font-bold text-gray-500 uppercase bg-gray-50 sticky top-0">Books</h4>
+									{results.books.map((book) => (
+										<div key={book.id} className="p-4 hover:bg-gray-50 flex items-start gap-4 transition cursor-pointer" onClick={() => handleBookClick(book.id)}>
+											<div className="flex-shrink-0">
+												{book.coverUrl ? (
+													<img src={book.coverUrl} alt={book.title} className="w-12 h-16 object-cover rounded border" />
+												) : (
+													<div className="w-12 h-16 bg-gray-100 rounded flex items-center justify-center">
+														<BookOpen className="w-6 h-6 text-gray-400" />
+													</div>
+												)}
+											</div>
+											<div className="flex-1 min-w-0">
+												<h4 className="font-medium text-gray-900 truncate">{book.title}</h4>
+												<p className="text-sm text-gray-600 truncate">by {book.author}</p>
+												<div className="flex items-center gap-2 mt-1">
+													{book.isbn && <span className="text-xs text-gray-500">ISBN: {book.isbn}</span>}
+													<span className={`text-xs px-2 py-0.5 rounded-full ${book.available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{book.available ? "Available" : "Borrowed"}</span>
+												</div>
+											</div>
+											{session?.user?.role === "ADMIN" && (
+												<div className="flex flex-col gap-1">
+													<button
+														onClick={(e) => { e.stopPropagation(); handleQuickAction('issue', book.id, 'book'); }}
+														className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+														disabled={!book.available}
+													>
+														Issue
+													</button>
+												</div>
+											)}
+										</div>
+									))}
+								</div>
+							)}
+						</div>
+					)}
+				</div>
+
+				{!loading && searchQuery.length < 2 && (
+					<div className="p-4 border-t bg-gray-50 text-center text-xs text-gray-500 flex-shrink-0">
+						Start typing to search across {session?.user?.role === "ADMIN" ? "books and users" : "books"}
 					</div>
 				)}
 			</div>

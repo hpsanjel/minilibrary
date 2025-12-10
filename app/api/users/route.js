@@ -24,9 +24,9 @@ export async function GET(request) {
 				photo: true,
 				role: true,
 				verifiedUser: true,
-				transactions: {
+				Transaction: {
 					include: {
-						book: true,
+						Book: true,
 					},
 					orderBy: {
 						createdAt: "desc",

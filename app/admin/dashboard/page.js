@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { BookIcon, HandGrab, List, Menu, UserIcon, X, Search } from "lucide-react";
-import QuickSearchBox from "@/components/QuickSearchBox";
+
 
 export default function AdminDashboard() {
 	const [stats, setStats] = useState({
@@ -85,7 +85,7 @@ export default function AdminDashboard() {
 						<h1 className="text-3xl font-bold">Admin Dashboard</h1>
 					</div>
 					<div className="flex items-center space-x-4">
-						<QuickSearchBox placeholder="Search users or books..." className="w-full sm:w-80 md:w-120" />
+						{/* Search removed as it is available in Navbar */}
 					</div>
 				</header>
 

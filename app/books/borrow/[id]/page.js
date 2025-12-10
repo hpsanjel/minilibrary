@@ -53,12 +53,12 @@ export default function BorrowBookPage() {
 
 				// Fetch user details
 				const userRes = await fetch(`/api/users?id=${session.user.id}`);
-				const userData = await userRes.json();
+				const userData = userRes.ok ? await userRes.json() : null;
 				setUser(userData);
 
 				// Fetch user's current transactions
 				const transactionsRes = await fetch(`/api/transactions?userId=${session.user.id}`);
-				const transactionsData = await transactionsRes.json();
+				const transactionsData = transactionsRes.ok ? await transactionsRes.json() : [];
 				setUserTransactions(transactionsData.filter((t) => !t.returned));
 			} catch (error) {
 				console.error("Error fetching data:", error);
@@ -146,7 +146,7 @@ export default function BorrowBookPage() {
 
 	return (
 		<div className="min-h-screen bg-gray-50 py-12">
-			<div className="max-w-2xl mx-auto px-4">
+			<div className="max-w-lg mx-auto px-4">
 				<div className="bg-white rounded-lg shadow-lg overflow-hidden">
 					{/* Header */}
 					<div className="bg-blue-600 text-white p-6">

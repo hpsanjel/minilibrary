@@ -35,16 +35,16 @@ export async function GET(req) {
 		// Get fine payments with related data
 		const finePayments = await prisma.finePayment.findMany({
 			include: {
-				user: {
+				User: {
 					select: {
 						id: true,
 						name: true,
 						email: true,
 					},
 				},
-				transaction: {
+				Transaction: {
 					include: {
-						book: {
+						Book: {
 							select: {
 								id: true,
 								title: true,

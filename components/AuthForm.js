@@ -281,86 +281,188 @@ export default function AuthForm() {
 	};
 
 	return (
-		<form onSubmit={handleSubmit} className="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow space-y-6" autoComplete="off">
-			<h1 className="text-2xl font-bold text-center text-gray-900">{isSignUp ? "Sign Up" : "Sign In"}</h1>
+		<div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+			<div className="max-w-4xl w-full bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row">
+				{/* Brand Section (Left Side) */}
+				<div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-blue-600 to-blue-800 p-12 flex-col justify-between text-white relative overflow-hidden">
+					<div className="relative z-10">
+						<div className="flex items-center gap-3 mb-8">
+							<div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+								<svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+								</svg>
+							</div>
+							<span className="text-2xl font-bold tracking-wide">Mini Library</span>
+						</div>
+						<h2 className="text-4xl font-bold mb-6 leading-tight">
+							{isSignUp ? "Join Our Community" : "Welcome Back"}
+						</h2>
+						<p className="text-blue-100 text-lg">
+							{isSignUp
+								? "Start your journey with thousands of books at your fingertips. Create an account today."
+								: "Access your personalized library dashboard, track your borrowed books, and discover new reads."}
+						</p>
+					</div>
 
-			{callbackUrl && callbackUrl.includes("/books/borrow/") && !isSignUp && (
-				<div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-					<p className="text-blue-800 text-sm">
-						📚 <strong>Almost there!</strong> Sign in to continue borrowing your selected book.
-					</p>
+					{/* Decorative circles */}
+					<div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-blue-500 opacity-20 blur-3xl"></div>
+					<div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 rounded-full bg-blue-400 opacity-20 blur-3xl"></div>
+
+					<div className="relative z-10 text-sm text-blue-200">
+						© 2024 Mini Library System
+					</div>
 				</div>
-			)}
 
-			{error && (
-				<div className="text-red-600 text-center">
-					<p>{error}</p>
-					{showResendVerification && !isSignUp && (
-						<button type="button" onClick={handleResendVerification} disabled={resendingEmail} className="mt-2 text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition disabled:opacity-50">
-							{resendingEmail ? "Sending..." : "Resend Verification Email"}
+				{/* Form Section (Right Side) */}
+				<div className="w-full md:w-1/2 p-8 sm:p-12">
+					<div className="text-center md:text-left mb-8">
+						<h3 className="text-2xl font-bold text-gray-900">
+							{isSignUp ? "Create an Account" : "Sign In to Your Account"}
+						</h3>
+						<p className="mt-2 text-sm text-gray-600">
+							{isSignUp ? "Please fill in your details below" : "Enter your credentials to access your account"}
+						</p>
+					</div>
+
+					<form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
+						{callbackUrl && callbackUrl.includes("/books/borrow/") && !isSignUp && (
+							<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+								<div className="flex-shrink-0 mt-0.5">
+									<svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+									</svg>
+								</div>
+								<p className="text-blue-800 text-sm">
+									<strong>Almost there!</strong> Sign in to continue borrowing your selected book.
+								</p>
+							</div>
+						)}
+
+						{error && (
+							<div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+								<p className="text-red-600 text-sm font-medium">{error}</p>
+								{showResendVerification && !isSignUp && (
+									<button type="button" onClick={handleResendVerification} disabled={resendingEmail} className="mt-3 text-xs bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded transition disabled:opacity-50 font-medium">
+										{resendingEmail ? "Sending..." : "Resend Verification Email"}
+									</button>
+								)}
+							</div>
+						)}
+
+						{success && (
+							<div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+								<p className="text-green-600 text-sm font-medium">{success}</p>
+							</div>
+						)}
+
+						{isSignUp && (
+							<div className="space-y-4 animate-fade-in">
+								<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+									<div>
+										<label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+										<input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" value={name} onChange={(e) => setName(e.target.value)} required placeholder="John Doe" />
+									</div>
+									<div>
+										<label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+										<input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 234 567 890" />
+									</div>
+								</div>
+
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+									<input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Library St" />
+								</div>
+
+								<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+									<div>
+										<label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+										<input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" value={city} onChange={(e) => setCity(e.target.value)} placeholder="New York" />
+									</div>
+									<div>
+										<label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
+										<input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="10001" />
+									</div>
+								</div>
+
+								<div className="pt-2">
+									<PhotoUpload photo={photo} setPhoto={setPhoto} />
+								</div>
+							</div>
+						)}
+
+						<div className="space-y-4">
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+								<div className="relative">
+									<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+										<svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+										</svg>
+									</div>
+									<input type="email" className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="off" required placeholder="you@example.com" />
+								</div>
+							</div>
+
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+								<div className="relative">
+									<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+										<svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+										</svg>
+									</div>
+									<input type="password" className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required placeholder="••••••••" />
+								</div>
+								{!isSignUp && (
+									<div className="flex justify-end mt-2">
+										<a href="/auth/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors">
+											Forgot password?
+										</a>
+									</div>
+								)}
+							</div>
+						</div>
+
+						<button type="submit" className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled={loading}>
+							{loading ? (
+								<span className="flex items-center">
+									<svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+										<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+										<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+									</svg>
+									{isSignUp ? "Creating Account..." : "Signing In..."}
+								</span>
+							) : (
+								isSignUp ? "Create Account" : "Sign In"
+							)}
 						</button>
-					)}
+
+						<div className="relative my-6">
+							<div className="absolute inset-0 flex items-center">
+								<div className="w-full border-t border-gray-200"></div>
+							</div>
+							<div className="relative flex justify-center text-sm">
+								<span className="px-2 bg-white text-gray-500">
+									{isSignUp ? "Already have an account?" : "New to Mini Library?"}
+								</span>
+							</div>
+						</div>
+
+						<button
+							type="button"
+							className="w-full flex justify-center py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
+							onClick={() => {
+								setIsSignUp((v) => !v);
+								setError("");
+								setSuccess("");
+								setShowResendVerification(false);
+							}}
+						>
+							{isSignUp ? "Sign In Instead" : "Create an Account"}
+						</button>
+					</form>
 				</div>
-			)}
-			{success && <p className="text-green-600 text-center">{success}</p>}
-			{isSignUp && (
-				<>
-					<div>
-						<label className="block mb-2 text-gray-700">Name</label>
-						<input type="text" className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" value={name} onChange={(e) => setName(e.target.value)} required />
-					</div>
-					<div>
-						<label className="block mb-2 text-gray-700">Address</label>
-						<input type="text" className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" value={address} onChange={(e) => setAddress(e.target.value)} />
-					</div>
-					<div>
-						<label className="block mb-2 text-gray-700">City</label>
-						<input type="text" className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" value={city} onChange={(e) => setCity(e.target.value)} />
-					</div>
-					<div>
-						<label className="block mb-2 text-gray-700">Postal Code</label>
-						<input type="text" className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
-					</div>
-					<div>
-						<label className="block mb-2 text-gray-700">Phone</label>
-						<input type="text" className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" value={phone} onChange={(e) => setPhone(e.target.value)} />
-					</div>
-					<PhotoUpload photo={photo} setPhoto={setPhoto} />
-				</>
-			)}
-			<div>
-				<label className="block mb-2 text-gray-700">Email</label>
-				<input type="email" className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="off" required />
 			</div>
-			<div>
-				<label className="block mb-2 text-gray-700">Password</label>
-				<input type="password" className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required />
-				{!isSignUp && (
-					<div className="text-right mt-1">
-						<a href="/auth/forgot-password" className="text-sm text-blue-600 hover:underline">
-							Forgot password?
-						</a>
-					</div>
-				)}
-			</div>
-			<button type="submit" className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition disabled:opacity-50" disabled={loading}>
-				{loading ? (isSignUp ? "Signing up..." : "Signing in...") : isSignUp ? "Sign Up" : "Sign In"}
-			</button>
-			<p className="text-center text-gray-600">
-				{isSignUp ? "Already have an account?" : "Don't have an account?"}
-				<button
-					type="button"
-					className="ml-2 text-blue-600 hover:underline focus:outline-none"
-					onClick={() => {
-						setIsSignUp((v) => !v);
-						setError("");
-						setSuccess("");
-						setShowResendVerification(false);
-					}}
-				>
-					{isSignUp ? "Sign In" : "Sign Up"}
-				</button>
-			</p>
-		</form>
+		</div>
 	);
 }

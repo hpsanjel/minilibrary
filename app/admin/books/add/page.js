@@ -172,7 +172,7 @@ export default function AddBookPage() {
 									<li>• Create a folder with your CSV file and book cover images</li>
 									<li>• CSV must include columns: title, author, isbn, copies, imageFileName</li>
 									<li>• Title and author are required fields</li>
-									<li>• imageFileName should match the image file names in the ZIP (e.g., "gatsby.jpg")</li>
+									<li>• imageFileName should match the image file names in the ZIP (e.g., &quot;gatsby.jpg&quot;)</li>
 									<li>• Leave imageFileName empty if no cover image for that book</li>
 									<li>• ZIP the folder and upload it below</li>
 								</ul>

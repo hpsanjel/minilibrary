@@ -33,9 +33,13 @@ export default function QuickSearchBox({ placeholder = "Quick search...", classN
 		try {
 			const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
 			const data = await response.json();
+			if (data.error) {
+				console.error("Search API error:", data.error);
+				return;
+			}
 			setSuggestions({
-				users: data.users.slice(0, 3),
-				books: data.books.slice(0, 3),
+				users: (data.users || []).slice(0, 3),
+				books: (data.books || []).slice(0, 3),
 			});
 			setShowSuggestions(true);
 		} catch (error) {
