@@ -1,5 +1,5 @@
 "use client";
-import ConfirmationModal from "@/components/ConfirmationModal";
+// import ConfirmationModal from "@/components/ConfirmationModal";
 import UserDeletionModal from "@/components/UserDeletionModal";
 import PhotoUpload from "@/components/PhotoUpload";
 import { useEffect, useState } from "react";
