@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Html5QrcodeScanner } from "html5-qrcode";
+import { QrCode, Search, X } from "lucide-react";
 
 export default function AdminIssuePage() {
 	const [users, setUsers] = useState([]);
@@ -284,20 +285,23 @@ export default function AdminIssuePage() {
 				<div>
 					<label className="block mb-1 font-medium">User</label>
 					<div className="flex gap-2 mb-2">
-						<input
-							ref={userInputRef}
-							type="text"
-							placeholder="Search user by membership ID, name or email"
-							value={userQuery}
-							onChange={(e) => {
-								setUserQuery(e.target.value);
-								setSelectedUser(null);
-							}}
-							className="border p-2 rounded flex-1"
-							autoComplete="off"
-						/>
+						<div className="relative flex-1">
+							<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+							<input
+								ref={userInputRef}
+								type="text"
+								placeholder="Search user by membership ID, name or email"
+								value={userQuery}
+								onChange={(e) => {
+									setUserQuery(e.target.value);
+									setSelectedUser(null);
+								}}
+								className="border p-2 pl-10 rounded w-full"
+								autoComplete="off"
+							/>
+						</div>
 						<button type="button" onClick={showUserScanner ? stopUserScanner : startUserScanner} className={`px-3 py-2 rounded font-medium transition ${showUserScanner ? "bg-red-500 hover:bg-red-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}`} title={showUserScanner ? "Stop QR Scanner" : "Scan Membership QR Code"}>
-							{showUserScanner ? "🛑" : "📱"}
+							{showUserScanner ? <X className="w-5 h-5" /> : <QrCode className="w-5 h-5" />}
 						</button>
 					</div>
 
@@ -311,9 +315,9 @@ export default function AdminIssuePage() {
 								</button>
 							</div>
 							<div className="text-sm text-gray-600 mb-3">
-								<p>📱 Allow camera access when prompted</p>
-								<p>🎯 Point camera at QR code on membership card</p>
-								<p>💡 Make sure QR code is clearly visible and well-lit</p>
+								<p>Allow camera access when prompted</p>
+								<p>Point camera at QR code on membership card</p>
+								<p>Make sure QR code is clearly visible and well-lit</p>
 								<p className="text-blue-600 mt-2">
 									<strong>Tip:</strong> If camera doesn&apos;t work, you can manually type the membership number above
 								</p>
@@ -357,7 +361,7 @@ export default function AdminIssuePage() {
 							autoComplete="off"
 						/>
 						<button type="button" onClick={showBookScanner ? stopBookScanner : startBookScanner} className={`px-3 py-2 rounded font-medium transition ${showBookScanner ? "bg-red-500 hover:bg-red-600 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`} title={showBookScanner ? "Stop QR Scanner" : "Scan Book ISBN QR Code"}>
-							{showBookScanner ? "🛑" : "📚"}
+							{showBookScanner ? <X className="w-5 h-5" /> : <QrCode className="w-5 h-5" />}
 						</button>
 					</div>
 

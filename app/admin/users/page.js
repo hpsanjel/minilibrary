@@ -17,6 +17,7 @@ export default function AdminUsersPage() {
 	const [form, setForm] = useState({ id: null, name: "", email: "", password: "", phone: "", city: "", postalCode: "", address: "", photo: "", role: "STUDENT" });
 	const [verifyingUsers, setVerifyingUsers] = useState(new Set()); // Track users being verified
 	const [resettingPasswords, setResettingPasswords] = useState(new Set()); // Track users having password reset
+	const [zoomedImage, setZoomedImage] = useState(null);
 
 	const searchParams = useSearchParams();
 	const router = useRouter();
@@ -283,6 +284,7 @@ export default function AdminUsersPage() {
 								handleVerify={handleVerify}
 								verifyingUsers={verifyingUsers}
 								emptyMessage="No administrators found."
+								onImageClick={(url) => setZoomedImage(url)}
 							/>
 						</div>
 
@@ -302,12 +304,14 @@ export default function AdminUsersPage() {
 								handleVerify={handleVerify}
 								verifyingUsers={verifyingUsers}
 								emptyMessage="No students found."
+								onImageClick={(url) => setZoomedImage(url)}
 							/>
 						</div>
 					</div>
 
 					{/* User Deletion Modal */}
 					<UserDeletionModal isOpen={isUserDeletionModalOpen} onClose={() => setIsUserDeletionModalOpen(false)} onConfirm={handleDelete} user={selectedUserForDeletion} />
+					<ImageModal src={zoomedImage} onClose={() => setZoomedImage(null)} />
 				</>
 			)}
 
@@ -616,13 +620,12 @@ function TransactionCard({ transaction, isActive }) {
 }
 
 // User Table Component
-function UserTable({ users, loading, openEditModal, handleResetPassword, resettingPasswords, openDeleteModal, handleVerify, verifyingUsers, emptyMessage }) {
+function UserTable({ users, loading, openEditModal, handleResetPassword, resettingPasswords, openDeleteModal, handleVerify, verifyingUsers, emptyMessage, onImageClick }) {
 	return (
 		<div className="overflow-x-auto rounded-lg shadow border bg-white">
 			<table className="min-w-full divide-y divide-gray-200">
 				<thead className="bg-gray-50">
 					<tr>
-						<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membership #</th>
 						<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo</th>
 						<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
 						<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
@@ -633,22 +636,21 @@ function UserTable({ users, loading, openEditModal, handleResetPassword, resetti
 				<tbody className="bg-white divide-y divide-gray-200">
 					{loading ? (
 						<tr>
-							<td colSpan={6} className="text-center py-8 text-gray-400">
+							<td colSpan={5} className="text-center py-8 text-gray-400">
 								Loading...
 							</td>
 						</tr>
 					) : users.length === 0 ? (
 						<tr>
-							<td colSpan={6} className="text-center py-8 text-gray-400">
+							<td colSpan={5} className="text-center py-8 text-gray-400">
 								{emptyMessage}
 							</td>
 						</tr>
 					) : (
 						users.map((user) => (
 							<tr key={user.id} className="hover:bg-gray-50">
-								<td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-blue-600 font-semibold">{user.membershipNumber || "-"}</td>
 								<td className="px-6 py-4 whitespace-nowrap">
-									<div className="w-10 h-10 rounded-full overflow-hidden">
+									<div className="w-10 h-10 rounded-full overflow-hidden cursor-pointer hover:opacity-80 transition-opacity" onClick={() => user.photo && onImageClick && onImageClick(user.photo)}>
 										{user.photo ? (
 											<img src={user.photo} alt={`${user.name}'s profile`} className="w-full h-full object-cover" />
 										) : (
@@ -702,6 +704,21 @@ function UserTable({ users, loading, openEditModal, handleResetPassword, resetti
 					)}
 				</tbody>
 			</table>
+		</div>
+	);
+}
+
+// Image Modal Component
+function ImageModal({ src, onClose }) {
+	if (!src) return null;
+	return (
+		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 p-4" onClick={onClose}>
+			<div className="relative max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center">
+				<img src={src} alt="Zoomed" className="max-w-full max-h-full object-contain rounded-lg" onClick={(e) => e.stopPropagation()} />
+				<button className="absolute top-4 right-4 text-white hover:text-gray-300 p-2 bg-black bg-opacity-50 rounded-full" onClick={onClose}>
+					<XCircle className="w-8 h-8" />
+				</button>
+			</div>
 		</div>
 	);
 }
