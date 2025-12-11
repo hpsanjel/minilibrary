@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, ArrowLeft, BookOpen, User, Calendar, Edit, Trash2, CheckCircle, XCircle, AlertTriangle, Clock } from "lucide-react";
+import ImageUpload from "@/components/ImageUpload";
 
 export default function AdminBooksPage() {
 	const [books, setBooks] = useState([]);
@@ -199,7 +200,12 @@ export default function AdminBooksPage() {
 							<input type="text" placeholder="Title" value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="border p-2 rounded" required />
 							<input type="text" placeholder="Author" value={editForm.author} onChange={(e) => setEditForm({ ...editForm, author: e.target.value })} className="border p-2 rounded" required />
 							<input type="text" placeholder="ISBN (optional)" value={editForm.isbn} onChange={(e) => setEditForm({ ...editForm, isbn: e.target.value })} className="border p-2 rounded" />
-							<input type="url" placeholder="Cover Image URL (optional)" value={editForm.coverUrl} onChange={(e) => setEditForm({ ...editForm, coverUrl: e.target.value })} className="border p-2 rounded" />
+							<ImageUpload
+								image={editForm.coverUrl}
+								setImage={(url) => setEditForm({ ...editForm, coverUrl: url })}
+								label="Cover Image"
+								optional={true}
+							/>
 							<input type="number" min={1} placeholder="Copies" value={editForm.copies} onChange={(e) => setEditForm({ ...editForm, copies: Number(e.target.value) })} className="border p-2 rounded" required />
 
 							<div className="flex gap-2 mt-4">

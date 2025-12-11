@@ -9,9 +9,9 @@ export default async function AdminLayout({ children }) {
 		redirect("/");
 	}
 	return (
-		<div className="flex">
+		<div className="flex h-[calc(100vh-4rem)] overflow-hidden">
 			<AdminSidebar />
-			<div className="flex-1 p-6 overflow-x-auto">{children}</div>
+			<div className="flex-1 p-6 overflow-y-auto">{children}</div>
 		</div>
 	);
 }

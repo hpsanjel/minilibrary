@@ -25,6 +25,11 @@ body {
 	font-family: Arial, Helvetica, sans-serif;
 }
 
+a,
+button {
+	cursor: pointer;
+}
+
 /* Hide scrollbar for horizontal scrolling tabs */
 .scrollbar-hide {
 	-ms-overflow-style: none; /* Internet Explorer 10+ */

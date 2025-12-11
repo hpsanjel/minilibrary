@@ -20,9 +20,9 @@ export default function AdminSidebar() {
 	const isActive = (path) => pathname === path;
 
 	return (
-		<aside className="hidden md:flex flex-col w-72 flex-shrink-0 bg-slate-900 text-white shadow-xl min-h-screen transition-all duration-300">
+		<aside className="hidden md:flex flex-col w-72 flex-shrink-0 bg-slate-900 text-white shadow-xl h-[calc(100vh-4rem)] transition-all duration-300">
 			{/* Header */}
-			<div className="p-6 border-b border-slate-800">
+			{/* <div className="p-6 border-b border-slate-800">
 				<div
 					className="flex items-center gap-3 cursor-pointer group"
 					onClick={() => router.push("/admin/dashboard")}
@@ -35,13 +35,13 @@ export default function AdminSidebar() {
 						<p className="text-xs text-slate-400 uppercase tracking-wider">Admin Panel</p>
 					</div>
 				</div>
-			</div>
+			</div> */}
 
 			{/* Navigation */}
 			<nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-				<p className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 mt-2">
+				{/* <p className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 mt-2">
 					Main Menu
-				</p>
+				</p> */}
 				{menuItems.map((item) => {
 					const active = isActive(item.path);
 					return (
@@ -49,8 +49,8 @@ export default function AdminSidebar() {
 							key={item.path}
 							onClick={() => router.push(item.path)}
 							className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${active
-									? "bg-blue-600 text-white shadow-lg shadow-blue-900/20"
-									: "text-slate-400 hover:bg-slate-800 hover:text-white"
+								? "bg-blue-600 text-white shadow-lg shadow-blue-900/20"
+								: "text-slate-400 hover:bg-slate-800 hover:text-white"
 								}`}
 						>
 							<item.icon className={`w-5 h-5 ${active ? "text-white" : "text-slate-400 group-hover:text-white"}`} />

@@ -6,10 +6,12 @@ import { Html5QrcodeScanner } from "html5-qrcode";
 export default function AdminIssuePage() {
 	const [users, setUsers] = useState([]);
 	const [books, setBooks] = useState([]);
+	const [allBooks, setAllBooks] = useState([]); // Store all books for ISBN check
 	const [selectedUser, setSelectedUser] = useState(null);
 	const [selectedBook, setSelectedBook] = useState(null);
 	const [userQuery, setUserQuery] = useState("");
 	const [bookQuery, setBookQuery] = useState("");
+	const [bookError, setBookError] = useState("");
 	const userInputRef = useRef();
 	const bookInputRef = useRef();
 	const [message, setMessage] = useState("");
@@ -31,13 +33,20 @@ export default function AdminIssuePage() {
 			fetch("/api/books").then((res) => res.json())
 		]).then(([usersData, booksData]) => {
 			setUsers(usersData);
+			setAllBooks(booksData);
 
 			// Filter books that have available copies
 			const availableBooks = booksData.filter((b) => {
 				// Extract available count from "X of Y available" format
-				const match = b.availableCopies?.match(/^(\d+) of \d+ available$/);
-				const availableCount = match ? parseInt(match[1]) : 0;
-				return availableCount > 0;
+				// Or if API returns raw number, handle that. 
+				// Assuming API returns object with availableCopies string or number.
+				// Let's check how it was before. It used regex match.
+				if (typeof b.availableCopies === 'string') {
+					const match = b.availableCopies.match(/^(\d+) of \d+ available$/);
+					const availableCount = match ? parseInt(match[1]) : 0;
+					return availableCount > 0;
+				}
+				return b.copies > 0; // Fallback if structure is different
 			});
 			setBooks(availableBooks);
 
@@ -54,9 +63,6 @@ export default function AdminIssuePage() {
 			if (bookIdParam) {
 				const book = booksData.find(b => b.id === parseInt(bookIdParam));
 				if (book) {
-					// Check if book is available, if not, still select it but maybe warn?
-					// For now, just select it even if not in availableBooks (to show it)
-					// But we should probably use booksData to find it
 					setSelectedBook(book);
 					setBookQuery(`${book.title} by ${book.author}`);
 				}
@@ -104,7 +110,6 @@ export default function AdminIssuePage() {
 
 				scanner.render(
 					(decodedText) => {
-						// Handle successful scan
 						console.log("User QR scanned:", decodedText);
 						setUserQuery(decodedText);
 						setSelectedUser(null);
@@ -112,7 +117,6 @@ export default function AdminIssuePage() {
 							.clear()
 							.then(() => {
 								setShowUserScanner(false);
-								// Auto-focus to book input after successful scan
 								setTimeout(() => {
 									if (bookInputRef.current) {
 										bookInputRef.current.focus();
@@ -125,7 +129,6 @@ export default function AdminIssuePage() {
 							});
 					},
 					(error) => {
-						// Handle scan error (usually just no QR code detected)
 						if (error && !error.includes("No MultiFormat Readers") && !error.includes("NotFoundException")) {
 							console.log("QR scan error:", error);
 						}
@@ -165,10 +168,27 @@ export default function AdminIssuePage() {
 
 				scanner.render(
 					(decodedText) => {
-						// Handle successful scan
 						console.log("Book QR scanned:", decodedText);
+						// Update query and trigger change handler logic manually or via state effect
+						// Here we just set query and let the user confirm or we can try to auto-select
 						setBookQuery(decodedText);
-						setSelectedBook(null);
+
+						// Auto-select logic for scanner
+						const exactMatch = allBooks.find(b => b.isbn === decodedText.trim());
+						if (exactMatch) {
+							const isAvailable = books.find(b => b.id === exactMatch.id);
+							if (isAvailable) {
+								setSelectedBook(exactMatch);
+								setBookError("");
+							} else {
+								setSelectedBook(null);
+								setBookError("Book is not available in the system.");
+							}
+						} else {
+							setSelectedBook(null);
+							// Maybe don't show error immediately if scanning title? But scanner usually scans ISBN.
+						}
+
 						scanner
 							.clear()
 							.then(() => {
@@ -180,7 +200,6 @@ export default function AdminIssuePage() {
 							});
 					},
 					(error) => {
-						// Handle scan error
 						if (error && !error.includes("No MultiFormat Readers") && !error.includes("NotFoundException")) {
 							console.log("QR scan error:", error);
 						}
@@ -212,6 +231,27 @@ export default function AdminIssuePage() {
 		setShowBookScanner(false);
 	};
 
+	const handleBookInputChange = (e) => {
+		const value = e.target.value;
+		setBookQuery(value);
+		setSelectedBook(null);
+		setBookError("");
+
+		// Check for exact ISBN match
+		if (value.trim().length >= 10) {
+			const exactMatch = allBooks.find(b => b.isbn === value.trim());
+			if (exactMatch) {
+				const isAvailable = books.find(b => b.id === exactMatch.id);
+				if (isAvailable) {
+					setSelectedBook(exactMatch);
+					setBookError("");
+				} else {
+					setBookError("Book is not available in the system.");
+				}
+			}
+		}
+	};
+
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setLoading(true);
@@ -224,6 +264,7 @@ export default function AdminIssuePage() {
 		const data = await res.json();
 		if (res.ok) {
 			setMessage("Book issued successfully!");
+			setTimeout(() => setMessage(""), 3000);
 			setSelectedUser(null);
 			setSelectedBook(null);
 			setUserQuery("");
@@ -236,7 +277,7 @@ export default function AdminIssuePage() {
 	};
 
 	return (
-		<div className="max-w-xl mx-auto p-6">
+		<div className="max-w-xl p-6">
 			<h1 className="text-2xl font-bold mb-6">Issue Book to User</h1>
 			<form onSubmit={handleSubmit} className="flex flex-col gap-4 bg-white p-6 rounded shadow">
 				{/* User Combobox */}
@@ -311,11 +352,8 @@ export default function AdminIssuePage() {
 							type="text"
 							placeholder="Search book by title, author or ISBN"
 							value={bookQuery}
-							onChange={(e) => {
-								setBookQuery(e.target.value);
-								setSelectedBook(null);
-							}}
-							className="border p-2 rounded flex-1"
+							onChange={handleBookInputChange}
+							className={`border p-2 rounded flex-1 ${bookError ? "border-red-500" : ""}`}
 							autoComplete="off"
 						/>
 						<button type="button" onClick={showBookScanner ? stopBookScanner : startBookScanner} className={`px-3 py-2 rounded font-medium transition ${showBookScanner ? "bg-red-500 hover:bg-red-600 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`} title={showBookScanner ? "Stop QR Scanner" : "Scan Book ISBN QR Code"}>
@@ -343,6 +381,7 @@ export default function AdminIssuePage() {
 							<div id="book-qr-scanner" className="w-full"></div>
 						</div>
 					)}
+					{bookError && <div className="text-red-500 text-sm mt-1">{bookError}</div>}
 					{bookQuery && filteredBooks.length > 0 && (
 						<ul className="border rounded bg-white max-h-40 overflow-y-auto shadow mt-1">
 							{filteredBooks.map((b) => (
@@ -352,6 +391,7 @@ export default function AdminIssuePage() {
 									onClick={() => {
 										setSelectedBook(b);
 										setBookQuery(`${b.title} by ${b.author}`);
+										setBookError("");
 									}}
 								>
 									<div className="font-medium">
@@ -365,7 +405,7 @@ export default function AdminIssuePage() {
 						</ul>
 					)}
 				</div>
-				<button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow" disabled={loading || !selectedUser || !selectedBook}>
+				<button type="submit" className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded shadow" disabled={loading || !selectedUser || !selectedBook}>
 					{loading ? "Issuing..." : "Issue Book"}
 				</button>
 				{message && (
